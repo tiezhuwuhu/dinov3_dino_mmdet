@@ -27,6 +27,211 @@ class DINOHead(DeformableDETRHead):
     <https://arxiv.org/abs/2203.03605>`_ .
     """
 
+    def forward(self, hidden_states: Tensor,
+                references: List[Tensor]) -> Tuple[Tensor, Tensor]:
+        """Forward the DINO head and keep only point coordinates.
+    
+        The internal DINO regression branches still predict 4D
+        (cx, cy, w, h) for decoder refinement and two-stage proposals.
+        For the external prediction task, only (cx, cy) is returned.
+        """
+        all_layers_cls_scores, all_layers_bbox_preds = super().forward(
+            hidden_states, references)
+    
+        all_layers_point_preds = all_layers_bbox_preds[..., :2]
+    
+        return all_layers_cls_scores, all_layers_point_preds
+        
+    def _predict_by_feat_single(self,
+                                cls_score: Tensor,
+                                point_pred: Tensor,
+                                img_meta: dict,
+                                rescale: bool = True) -> InstanceData:
+        """Convert Point-DINO outputs into point predictions."""
+    
+        assert len(cls_score) == len(point_pred)
+    
+        # Stage-1 Point-DINO uses sigmoid Focal classification.
+        assert self.loss_cls.use_sigmoid
+    
+        max_per_img = self.test_cfg.get(
+            'max_per_img', len(cls_score))
+    
+        # Classification score of every query.
+        cls_score = cls_score.sigmoid()
+    
+        scores, indexes = cls_score.reshape(-1).topk(
+            max_per_img)
+    
+        det_labels = indexes % self.num_classes
+        point_indexes = indexes // self.num_classes
+    
+        # Select corresponding point predictions.
+        det_points = point_pred[point_indexes].clone()
+    
+        # Normalized (x, y) -> resized image pixel coordinates.
+        img_h, img_w = img_meta['img_shape']
+    
+        det_points[:, 0] *= img_w
+        det_points[:, 1] *= img_h
+    
+        # Resize-space -> original-image space.
+        if rescale:
+            assert img_meta.get('scale_factor') is not None
+    
+            scale_factor = det_points.new_tensor(
+                img_meta['scale_factor'])
+    
+            det_points /= scale_factor
+    
+        results = InstanceData()
+        results.points = det_points
+        results.scores = scores
+        results.labels = det_labels
+    
+        return results
+
+    def _get_targets_single(self, cls_score: Tensor, point_pred: Tensor,
+                            gt_instances: InstanceData,
+                            img_meta: dict) -> tuple:
+        """Compute classification and point targets for one image."""
+    
+        num_points = point_pred.size(0)
+    
+        # Predicted points are normalized (x, y) in [0, 1].
+        pred_instances = InstanceData(
+            scores=cls_score,
+            points=point_pred)
+    
+        # Hungarian matching:
+        # FocalLossCost + PointL1Cost
+        assign_result = self.assigner.assign(
+            pred_instances=pred_instances,
+            gt_instances=gt_instances,
+            img_meta=img_meta)
+    
+        gt_points = gt_instances.points
+        gt_labels = gt_instances.labels
+    
+        pos_inds = torch.nonzero(
+            assign_result.gt_inds > 0,
+            as_tuple=False).squeeze(-1).unique()
+    
+        neg_inds = torch.nonzero(
+            assign_result.gt_inds == 0,
+            as_tuple=False).squeeze(-1).unique()
+    
+        pos_assigned_gt_inds = assign_result.gt_inds[pos_inds] - 1
+        pos_gt_points = gt_points[pos_assigned_gt_inds.long(), :]
+    
+        # Classification targets.
+        labels = gt_points.new_full(
+            (num_points, ),
+            self.num_classes,
+            dtype=torch.long)
+    
+        labels[pos_inds] = gt_labels[pos_assigned_gt_inds]
+    
+        label_weights = gt_points.new_ones(num_points)
+    
+        # Point regression targets.
+        point_targets = torch.zeros_like(
+            point_pred,
+            dtype=gt_points.dtype)
+    
+        point_weights = torch.zeros_like(
+            point_pred,
+            dtype=gt_points.dtype)
+    
+        point_weights[pos_inds] = 1.0
+    
+        # GT points are pixel coordinates.
+        # Convert them to normalized (x, y) coordinates.
+        img_h, img_w = img_meta['img_shape']
+        factor = gt_points.new_tensor(
+            [img_w, img_h]).unsqueeze(0)
+    
+        pos_gt_points_normalized = pos_gt_points / factor
+    
+        point_targets[pos_inds] = pos_gt_points_normalized
+    
+        return (labels, label_weights,
+                point_targets, point_weights,
+                pos_inds, neg_inds)
+
+    def loss_by_feat_single(self,
+                            cls_scores: Tensor,
+                            point_preds: Tensor,
+                            batch_gt_instances: InstanceList,
+                            batch_img_metas: List[dict]) -> Tuple[Tensor, Tensor]:
+        """Compute classification loss and point L1 loss for one decoder layer."""
+    
+        num_imgs = cls_scores.size(0)
+    
+        cls_scores_list = [
+            cls_scores[i] for i in range(num_imgs)
+        ]
+        point_preds_list = [
+            point_preds[i] for i in range(num_imgs)
+        ]
+    
+        cls_reg_targets = self.get_targets(
+            cls_scores_list,
+            point_preds_list,
+            batch_gt_instances,
+            batch_img_metas)
+    
+        (labels_list,
+         label_weights_list,
+         point_targets_list,
+         point_weights_list,
+         num_total_pos,
+         num_total_neg) = cls_reg_targets
+    
+        labels = torch.cat(labels_list, 0)
+        label_weights = torch.cat(label_weights_list, 0)
+        point_targets = torch.cat(point_targets_list, 0)
+        point_weights = torch.cat(point_weights_list, 0)
+    
+        # Classification loss: keep original DINO Focal Loss.
+        cls_scores = cls_scores.reshape(
+            -1, self.cls_out_channels)
+    
+        cls_avg_factor = (
+            num_total_pos * 1.0 +
+            num_total_neg * self.bg_cls_weight)
+    
+        if self.sync_cls_avg_factor:
+            cls_avg_factor = reduce_mean(
+                cls_scores.new_tensor([cls_avg_factor]))
+    
+        cls_avg_factor = max(cls_avg_factor, 1)
+    
+        loss_cls = self.loss_cls(
+            cls_scores,
+            labels,
+            label_weights,
+            avg_factor=cls_avg_factor)
+    
+        # Average positive point count across GPUs.
+        num_total_pos = loss_cls.new_tensor(
+            [num_total_pos])
+    
+        num_total_pos = torch.clamp(
+            reduce_mean(num_total_pos),
+            min=1).item()
+    
+        # Point L1 loss.
+        point_preds = point_preds.reshape(-1, 2)
+    
+        loss_point = self.loss_bbox(
+            point_preds,
+            point_targets,
+            point_weights,
+            avg_factor=num_total_pos)
+    
+        return loss_cls, loss_point
+
     def loss(self, hidden_states: Tensor, references: List[Tensor],
              enc_outputs_class: Tensor, enc_outputs_coord: Tensor,
              batch_data_samples: SampleList, dn_meta: Dict[str, int]) -> dict:
@@ -75,94 +280,70 @@ class DINOHead(DeformableDETRHead):
         return losses
 
     def loss_by_feat(
-        self,
-        all_layers_cls_scores: Tensor,
-        all_layers_bbox_preds: Tensor,
-        enc_cls_scores: Tensor,
-        enc_bbox_preds: Tensor,
-        batch_gt_instances: InstanceList,
-        batch_img_metas: List[dict],
-        dn_meta: Dict[str, int],
-        batch_gt_instances_ignore: OptInstanceList = None
+            self,
+            all_layers_cls_scores: Tensor,
+            all_layers_point_preds: Tensor,
+            enc_cls_scores: Tensor,
+            enc_bbox_preds: Tensor,
+            batch_gt_instances: InstanceList,
+            batch_img_metas: List[dict],
+            dn_meta: Dict[str, int],
+            batch_gt_instances_ignore: OptInstanceList = None
     ) -> Dict[str, Tensor]:
-        """Loss function.
-
-        Args:
-            all_layers_cls_scores (Tensor): Classification scores of all
-                decoder layers, has shape (num_decoder_layers, bs,
-                num_queries_total, cls_out_channels), where
-                `num_queries_total` is the sum of `num_denoising_queries`
-                and `num_matching_queries`.
-            all_layers_bbox_preds (Tensor): Regression outputs of all decoder
-                layers. Each is a 4D-tensor with normalized coordinate format
-                (cx, cy, w, h) and has shape (num_decoder_layers, bs,
-                num_queries_total, 4).
-            enc_cls_scores (Tensor): The score of each point on encode
-                feature map, has shape (bs, num_feat_points, cls_out_channels).
-            enc_bbox_preds (Tensor): The proposal generate from the encode
-                feature map, has shape (bs, num_feat_points, 4) with the last
-                dimension arranged as (cx, cy, w, h).
-            batch_gt_instances (list[:obj:`InstanceData`]): Batch of
-                gt_instance. It usually includes ``bboxes`` and ``labels``
-                attributes.
-            batch_img_metas (list[dict]): Meta information of each image, e.g.,
-                image size, scaling factor, etc.
-            dn_meta (Dict[str, int]): The dictionary saves information about
-                group collation, including 'num_denoising_queries' and
-                'num_denoising_groups'. It will be used for split outputs of
-                denoising and matching parts and loss calculation.
-            batch_gt_instances_ignore (list[:obj:`InstanceData`], optional):
-                Batch of gt_instances_ignore. It includes ``bboxes`` attribute
-                data that is ignored during training and testing.
-                Defaults to None.
-
-        Returns:
-            dict[str, Tensor]: A dictionary of loss components.
-        """
-        # extract denoising and matching part of outputs
-        (all_layers_matching_cls_scores, all_layers_matching_bbox_preds,
-         all_layers_denoising_cls_scores, all_layers_denoising_bbox_preds) = \
-            self.split_outputs(
-                all_layers_cls_scores, all_layers_bbox_preds, dn_meta)
-
-        loss_dict = super(DeformableDETRHead, self).loss_by_feat(
-            all_layers_matching_cls_scores, all_layers_matching_bbox_preds,
-            batch_gt_instances, batch_img_metas, batch_gt_instances_ignore)
-        # NOTE DETRHead.loss_by_feat but not DeformableDETRHead.loss_by_feat
-        # is called, because the encoder loss calculations are different
-        # between DINO and DeformableDETR.
-
-        # loss of proposal generated from encode feature map.
+        """Loss for Point-DINO."""
+    
+        assert batch_gt_instances_ignore is None
+    
+        # Split matching queries and denoising queries.
+        (all_layers_matching_cls_scores,
+         all_layers_matching_point_preds,
+         all_layers_denoising_cls_scores,
+         all_layers_denoising_point_preds) = self.split_outputs(
+             all_layers_cls_scores,
+             all_layers_point_preds,
+             dn_meta)
+    
+        # Stage-1 Point-DINO does not use DN.
+        assert all_layers_denoising_cls_scores is None, \
+            'Point-DINO stage 1 requires use_dn=False.'
+    
+        # Decoder losses for all decoder layers.
+        losses_cls, losses_point = multi_apply(
+            self.loss_by_feat_single,
+            all_layers_matching_cls_scores,
+            all_layers_matching_point_preds,
+            batch_gt_instances=batch_gt_instances,
+            batch_img_metas=batch_img_metas)
+    
+        loss_dict = dict()
+    
+        # Last decoder layer.
+        loss_dict['loss_cls'] = losses_cls[-1]
+        loss_dict['loss_point'] = losses_point[-1]
+    
+        # Auxiliary losses from previous decoder layers.
+        for num_dec_layer, (loss_cls_i, loss_point_i) in enumerate(
+                zip(losses_cls[:-1], losses_point[:-1])):
+    
+            loss_dict[f'd{num_dec_layer}.loss_cls'] = loss_cls_i
+            loss_dict[f'd{num_dec_layer}.loss_point'] = loss_point_i
+    
+        # Encoder two-stage proposal loss.
         if enc_cls_scores is not None:
-            # NOTE The enc_loss calculation of the DINO is
-            # different from that of Deformable DETR.
-            enc_loss_cls, enc_losses_bbox, enc_losses_iou = \
-                self.loss_by_feat_single(
-                    enc_cls_scores, enc_bbox_preds,
-                    batch_gt_instances=batch_gt_instances,
-                    batch_img_metas=batch_img_metas)
-            loss_dict['enc_loss_cls'] = enc_loss_cls
-            loss_dict['enc_loss_bbox'] = enc_losses_bbox
-            loss_dict['enc_loss_iou'] = enc_losses_iou
-
-        if all_layers_denoising_cls_scores is not None:
-            # calculate denoising loss from all decoder layers
-            dn_losses_cls, dn_losses_bbox, dn_losses_iou = self.loss_dn(
-                all_layers_denoising_cls_scores,
-                all_layers_denoising_bbox_preds,
+    
+            # Encoder proposals are still internally 4D in stage 1.
+            # Only (x, y) participate in point matching and point loss.
+            enc_point_preds = enc_bbox_preds[..., :2]
+    
+            enc_loss_cls, enc_loss_point = self.loss_by_feat_single(
+                enc_cls_scores,
+                enc_point_preds,
                 batch_gt_instances=batch_gt_instances,
-                batch_img_metas=batch_img_metas,
-                dn_meta=dn_meta)
-            # collate denoising loss
-            loss_dict['dn_loss_cls'] = dn_losses_cls[-1]
-            loss_dict['dn_loss_bbox'] = dn_losses_bbox[-1]
-            loss_dict['dn_loss_iou'] = dn_losses_iou[-1]
-            for num_dec_layer, (loss_cls_i, loss_bbox_i, loss_iou_i) in \
-                    enumerate(zip(dn_losses_cls[:-1], dn_losses_bbox[:-1],
-                                  dn_losses_iou[:-1])):
-                loss_dict[f'd{num_dec_layer}.dn_loss_cls'] = loss_cls_i
-                loss_dict[f'd{num_dec_layer}.dn_loss_bbox'] = loss_bbox_i
-                loss_dict[f'd{num_dec_layer}.dn_loss_iou'] = loss_iou_i
+                batch_img_metas=batch_img_metas)
+    
+            loss_dict['enc_loss_cls'] = enc_loss_cls
+            loss_dict['enc_loss_point'] = enc_loss_point
+    
         return loss_dict
 
     def loss_dn(self, all_layers_denoising_cls_scores: Tensor,
@@ -459,8 +640,9 @@ class DINOHead(DeformableDETRHead):
               normalized coordinate format (cx, cy, w, h) and has shape
               (num_decoder_layers, bs, num_denoising_queries, 4).
         """
-        num_denoising_queries = dn_meta['num_denoising_queries']
         if dn_meta is not None:
+            num_denoising_queries = dn_meta['num_denoising_queries']
+            
             all_layers_denoising_cls_scores = \
                 all_layers_cls_scores[:, :, : num_denoising_queries, :]
             all_layers_denoising_bbox_preds = \

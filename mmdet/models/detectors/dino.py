@@ -26,8 +26,9 @@ class DINO(DeformableDETR):
             query generator. Defaults to `None`.
     """
 
-    def __init__(self, *args, dn_cfg: OptConfigType = None, **kwargs) -> None:
+    def __init__(self, *args, dn_cfg: OptConfigType = None,use_dn: bool = True, **kwargs) -> None:
         super().__init__(*args, **kwargs)
+        self.use_dn = use_dn
         assert self.as_two_stage, 'as_two_stage must be True for DINO'
         assert self.with_box_refine, 'with_box_refine must be True for DINO'
 
@@ -188,7 +189,7 @@ class DINO(DeformableDETR):
 
         query = self.query_embedding.weight[:, None, :]
         query = query.repeat(1, bs, 1).transpose(0, 1)
-        if self.training:
+        if self.training and self.use_dn:
             dn_label_query, dn_bbox_query, dn_mask, dn_meta = \
                 self.dn_query_generator(batch_data_samples)
             query = torch.cat([dn_label_query, query], dim=1)
@@ -274,7 +275,7 @@ class DINO(DeformableDETR):
             reg_branches=self.bbox_head.reg_branches,
             **kwargs)
 
-        if len(query) == self.num_queries:
+        if len(query) == self.num_queries and self.use_dn:
             # NOTE: This is to make sure label_embeding can be involved to
             # produce loss even if there is no denoising query (no ground truth
             # target in this GPU), otherwise, this will raise runtime error in
