@@ -44,6 +44,8 @@ class PackDetInputs(BaseTransform):
     mapping_table = {
         'gt_bboxes': 'bboxes',
         'gt_bboxes_labels': 'labels',
+        'gt_points_labels': 'labels',
+        'gt_points': 'points',
         'gt_masks': 'masks'
     }
 

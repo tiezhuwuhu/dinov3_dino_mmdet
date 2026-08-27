@@ -19,7 +19,7 @@ class DinoTransformerDecoder(DeformableDetrTransformerDecoder):
     def _init_layers(self) -> None:
         """Initialize decoder layers."""
         super()._init_layers()
-        self.ref_point_head = MLP(self.embed_dims * 2, self.embed_dims,
+        self.ref_point_head = MLP(self.embed_dims, self.embed_dims,
                                   self.embed_dims, 2)
         self.norm = nn.LayerNorm(self.embed_dims)
 
@@ -98,11 +98,28 @@ class DinoTransformerDecoder(DeformableDetrTransformerDecoder):
 
             if reg_branches is not None:
                 tmp = reg_branches[lid](query)
-                assert reference_points.shape[-1] == 4
-                new_reference_points = tmp + inverse_sigmoid(
-                    reference_points, eps=1e-3)
+            
+                if reference_points.shape[-1] == 4:
+                    # Keep the original 4D path for compatibility.
+                    new_reference_points = tmp + inverse_sigmoid(
+                        reference_points, eps=1e-3)
+            
+                elif reference_points.shape[-1] == 2:
+                    # Stage 2 Point-DINO:
+                    # The regression branch is still temporarily 4D,
+                    # but only dx, dy participate in point refinement.
+                    new_reference_points = tmp[..., :2] + inverse_sigmoid(
+                        reference_points, eps=1e-3)
+            
+                else:
+                    raise ValueError(
+                        'reference_points must have last dimension 2 or 4, '
+                        f'but got {reference_points.shape[-1]}')
+            
                 new_reference_points = new_reference_points.sigmoid()
+            
                 reference_points = new_reference_points.detach()
+
 
             if self.return_intermediate:
                 intermediate.append(self.norm(query))
@@ -560,3 +577,325 @@ class CdnQueryGenerator(BaseModule):
             attn_mask[row_scope, right_scope] = True
             attn_mask[row_scope, left_scope] = True
         return attn_mask
+
+
+class PointCdnQueryGenerator(CdnQueryGenerator):
+    """Contrastive denoising query generator for Point-DINO.
+
+    The spatial denoising query contains only normalized 2D point
+    coordinates (x, y), instead of a 4D bounding box.
+    """
+
+    def __init__(self,
+                 num_classes: int,
+                 embed_dims: int,
+                 num_matching_queries: int,
+                 label_noise_scale: float = 0.5,
+                 point_noise_scale: float = 0.05,
+                 group_cfg: OptConfigType = None) -> None:
+
+        # Keep the original CdnQueryGenerator initialization for:
+        # - label embedding
+        # - DN grouping
+        # - attention mask
+        #
+        # box_noise_scale is unused by PointCdnQueryGenerator.
+        super().__init__(
+            num_classes=num_classes,
+            embed_dims=embed_dims,
+            num_matching_queries=num_matching_queries,
+            label_noise_scale=label_noise_scale,
+            box_noise_scale=1.0,
+            group_cfg=group_cfg)
+
+        if point_noise_scale <= 0:
+            raise ValueError(
+                'point_noise_scale must be greater than 0.')
+
+        self.point_noise_scale = float(point_noise_scale)
+
+    def __call__(self, batch_data_samples: SampleList) -> tuple:
+        """Generate contrastive denoising queries from GT points."""
+
+        gt_labels_list = []
+        gt_points_list = []
+
+        # ---------------------------------------------------------
+        # 1. GT pixel point -> normalized (x, y)
+        # ---------------------------------------------------------
+        for sample in batch_data_samples:
+
+            img_h, img_w = sample.img_shape
+
+            gt_points = sample.gt_instances.points
+
+            factor = gt_points.new_tensor(
+                [img_w, img_h]).unsqueeze(0)
+
+            gt_points_normalized = gt_points / factor
+
+            gt_points_list.append(
+                gt_points_normalized)
+
+            gt_labels_list.append(
+                sample.gt_instances.labels)
+
+        gt_labels = torch.cat(
+            gt_labels_list,
+            dim=0)
+
+        gt_points = torch.cat(
+            gt_points_list,
+            dim=0)
+
+        num_target_list = [
+            len(points)
+            for points in gt_points_list
+        ]
+
+        max_num_target = max(
+            num_target_list)
+
+        num_groups = self.get_num_groups(
+            max_num_target)
+
+        # ---------------------------------------------------------
+        # 2. Content query
+        # ---------------------------------------------------------
+        dn_label_query = \
+            self.generate_dn_label_query(
+                gt_labels,
+                num_groups)
+
+        # ---------------------------------------------------------
+        # 3. 2D position query
+        # ---------------------------------------------------------
+        dn_point_query = \
+            self.generate_dn_point_query(
+                gt_points,
+                num_groups)
+
+        # ---------------------------------------------------------
+        # 4. Batch index of each GT
+        # ---------------------------------------------------------
+        batch_idx = torch.cat([
+            torch.full_like(
+                labels.long(),
+                i)
+            for i, labels
+            in enumerate(gt_labels_list)
+        ])
+
+        # ---------------------------------------------------------
+        # 5. Pad/collate to batch
+        # ---------------------------------------------------------
+        dn_label_query, dn_point_query = \
+            self.collate_dn_queries(
+                dn_label_query,
+                dn_point_query,
+                batch_idx,
+                len(batch_data_samples),
+                num_groups)
+
+        # ---------------------------------------------------------
+        # 6. Original DINO DN attention mask can be reused
+        # ---------------------------------------------------------
+        attn_mask = self.generate_dn_mask(
+            max_num_target,
+            num_groups,
+            device=dn_label_query.device)
+
+        dn_meta = dict(
+            num_denoising_queries=int(
+                max_num_target * 2 * num_groups),
+            num_denoising_groups=num_groups)
+
+        return (
+            dn_label_query,
+            dn_point_query,
+            attn_mask,
+            dn_meta)
+
+    def generate_dn_point_query(
+            self,
+            gt_points: Tensor,
+            num_groups: int) -> Tensor:
+        """Generate positive and negative noisy point queries.
+
+        Positive DN points:
+            distance from GT is in [0, point_noise_scale).
+
+        Negative DN points:
+            distance from GT is in
+            [point_noise_scale, 2 * point_noise_scale).
+
+        Coordinates are normalized to [0, 1].
+        """
+
+        device = gt_points.device
+
+        # Repeat:
+        #
+        # positive group
+        # negative group
+        # positive group
+        # negative group
+        # ...
+        gt_points_expand = gt_points.repeat(
+            2 * num_groups,
+            1)
+
+        num_gt = len(gt_points)
+
+        # ---------------------------------------------------------
+        # Positive / negative query indices
+        # ---------------------------------------------------------
+        positive_idx = torch.arange(
+            num_gt,
+            dtype=torch.long,
+            device=device)
+
+        positive_idx = positive_idx.unsqueeze(
+            0).repeat(
+                num_groups,
+                1)
+
+        positive_idx += (
+            2 * num_gt *
+            torch.arange(
+                num_groups,
+                dtype=torch.long,
+                device=device)[:, None]
+        )
+
+        positive_idx = positive_idx.flatten()
+
+        negative_idx = (
+            positive_idx + num_gt
+        )
+
+        # ---------------------------------------------------------
+        # Radial point noise
+        #
+        # pos radius: [0, 1) * scale
+        # neg radius: [1, 2) * scale
+        # ---------------------------------------------------------
+        num_noisy_targets = len(
+            gt_points_expand)
+
+        angle = torch.rand(
+            num_noisy_targets,
+            1,
+            device=device,
+            dtype=gt_points.dtype
+        ) * (2.0 * torch.pi)
+
+        radius = torch.rand(
+            num_noisy_targets,
+            1,
+            device=device,
+            dtype=gt_points.dtype)
+
+        radius[negative_idx] += 1.0
+
+        direction = torch.cat(
+            [
+                torch.cos(angle),
+                torch.sin(angle)
+            ],
+            dim=-1)
+
+        offset = (
+            direction *
+            radius *
+            self.point_noise_scale
+        )
+
+        noisy_points_expand = (
+            gt_points_expand + offset
+        )
+
+        noisy_points_expand = \
+            noisy_points_expand.clamp(
+                min=0.0,
+                max=1.0)
+
+        # Decoder references are stored in inverse-sigmoid space
+        # before entering pre_decoder().
+        dn_point_query = inverse_sigmoid(
+            noisy_points_expand,
+            eps=1e-3)
+
+        return dn_point_query
+
+    def collate_dn_queries(
+            self,
+            input_label_query: Tensor,
+            input_point_query: Tensor,
+            batch_idx: Tensor,
+            batch_size: int,
+            num_groups: int) -> Tuple[Tensor]:
+        """Collate point DN queries into batched tensors."""
+
+        device = input_label_query.device
+
+        num_target_list = [
+            torch.sum(batch_idx == idx)
+            for idx in range(batch_size)
+        ]
+
+        max_num_target = max(
+            num_target_list)
+
+        num_denoising_queries = int(
+            max_num_target *
+            2 *
+            num_groups)
+
+        map_query_index = torch.cat([
+            torch.arange(
+                num_target,
+                device=device)
+            for num_target
+            in num_target_list
+        ])
+
+        map_query_index = torch.cat([
+            map_query_index +
+            max_num_target * i
+            for i in range(
+                2 * num_groups)
+        ]).long()
+
+        batch_idx_expand = \
+            batch_idx.repeat(
+                2 * num_groups,
+                1).view(-1)
+
+        mapper = (
+            batch_idx_expand,
+            map_query_index)
+
+        batched_label_query = torch.zeros(
+            batch_size,
+            num_denoising_queries,
+            self.embed_dims,
+            device=device)
+
+        # Point-DINO:
+        # 4 -> 2
+        batched_point_query = torch.zeros(
+            batch_size,
+            num_denoising_queries,
+            2,
+            device=device)
+
+        batched_label_query[mapper] = \
+            input_label_query
+
+        batched_point_query[mapper] = \
+            input_point_query
+
+        return (
+            batched_label_query,
+            batched_point_query)
