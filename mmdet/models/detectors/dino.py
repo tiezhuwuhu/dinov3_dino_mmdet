@@ -8,7 +8,7 @@ from torch.nn.init import normal_
 from mmdet.registry import MODELS
 from mmdet.structures import OptSampleList
 from mmdet.utils import OptConfigType
-from ..layers import (CdnQueryGenerator, DeformableDetrTransformerEncoder,
+from ..layers import (PointCdnQueryGenerator, DeformableDetrTransformerEncoder,
                       DinoTransformerDecoder, SinePositionalEncoding)
 from .deformable_detr import DeformableDETR, MultiScaleDeformableAttention
 
@@ -26,8 +26,9 @@ class DINO(DeformableDETR):
             query generator. Defaults to `None`.
     """
 
-    def __init__(self, *args, dn_cfg: OptConfigType = None, **kwargs) -> None:
+    def __init__(self, *args, dn_cfg: OptConfigType = None,use_dn: bool = True, **kwargs) -> None:
         super().__init__(*args, **kwargs)
+        self.use_dn = use_dn
         assert self.as_two_stage, 'as_two_stage must be True for DINO'
         assert self.with_box_refine, 'with_box_refine must be True for DINO'
 
@@ -41,7 +42,7 @@ class DINO(DeformableDETR):
             dn_cfg['num_classes'] = self.bbox_head.num_classes
             dn_cfg['embed_dims'] = self.embed_dims
             dn_cfg['num_matching_queries'] = self.num_queries
-        self.dn_query_generator = CdnQueryGenerator(**dn_cfg)
+        self.dn_query_generator = PointCdnQueryGenerator(**dn_cfg)
 
     def _init_layers(self) -> None:
         """Initialize layers except for backbone, neck and bbox_head."""
@@ -123,6 +124,131 @@ class DINO(DeformableDETR):
         head_inputs_dict.update(decoder_outputs_dict)
         return head_inputs_dict
 
+    def gen_encoder_output_proposals(
+            self,
+            memory: Tensor,
+            memory_mask: Tensor,
+            spatial_shapes: Tensor) -> Tuple[Tensor, Tensor]:
+        """Generate 2D point proposals from encoder feature locations.
+    
+        Stage 2 Point-DINO:
+        the two-stage encoder proposals contain only normalized
+        point coordinates (x, y), without width and height.
+        """
+    
+        bs = memory.size(0)
+        proposals = []
+        _cur = 0
+    
+        for lvl, HW in enumerate(spatial_shapes):
+            H, W = HW
+    
+            if memory_mask is not None:
+                mask_flatten_ = memory_mask[
+                    :, _cur:(_cur + H * W)
+                ].view(bs, H, W, 1)
+    
+                valid_H = torch.sum(
+                    ~mask_flatten_[:, :, 0, 0],
+                    1).unsqueeze(-1)
+    
+                valid_W = torch.sum(
+                    ~mask_flatten_[:, 0, :, 0],
+                    1).unsqueeze(-1)
+    
+                scale = torch.cat(
+                    [valid_W, valid_H],
+                    1).view(bs, 1, 1, 2)
+    
+            else:
+                if not isinstance(HW, torch.Tensor):
+                    HW = memory.new_tensor(HW)
+    
+                scale = HW.unsqueeze(0).flip(
+                    dims=[0, 1]).view(1, 1, 1, 2)
+    
+            grid_y, grid_x = torch.meshgrid(
+                torch.linspace(
+                    0,
+                    H - 1,
+                    H,
+                    dtype=torch.float32,
+                    device=memory.device),
+                torch.linspace(
+                    0,
+                    W - 1,
+                    W,
+                    dtype=torch.float32,
+                    device=memory.device),
+                indexing='ij')
+    
+            grid = torch.cat(
+                [
+                    grid_x.unsqueeze(-1),
+                    grid_y.unsqueeze(-1)
+                ],
+                dim=-1)
+    
+            # Normalize feature-grid centers to [0, 1].
+            grid = (
+                grid.unsqueeze(0).expand(
+                    bs, -1, -1, -1) + 0.5
+            ) / scale
+    
+            # Pure Point-DINO proposal:
+            # only (x, y), no artificial (w, h).
+            proposal = grid.view(bs, -1, 2)
+    
+            proposals.append(proposal)
+    
+            _cur += H * W
+    
+        output_proposals = torch.cat(
+            proposals,
+            dim=1)
+    
+        # A valid point must lie inside the normalized image region.
+        output_proposals_valid = (
+            (output_proposals > 0.01)
+            & (output_proposals < 0.99)
+        ).sum(
+            -1,
+            keepdim=True
+        ) == output_proposals.shape[-1]
+    
+        # Convert normalized coordinates to inverse-sigmoid space.
+        output_proposals = torch.log(
+            output_proposals /
+            (1 - output_proposals))
+    
+        if memory_mask is not None:
+            output_proposals = output_proposals.masked_fill(
+                memory_mask.unsqueeze(-1),
+                float('inf'))
+    
+        output_proposals = output_proposals.masked_fill(
+            ~output_proposals_valid,
+            float('inf'))
+    
+        output_memory = memory
+    
+        if memory_mask is not None:
+            output_memory = output_memory.masked_fill(
+                memory_mask.unsqueeze(-1),
+                float(0))
+    
+        output_memory = output_memory.masked_fill(
+            ~output_proposals_valid,
+            float(0))
+    
+        output_memory = self.memory_trans_fc(
+            output_memory)
+    
+        output_memory = self.memory_trans_norm(
+            output_memory)
+    
+        return output_memory, output_proposals
+
     def pre_decoder(
         self,
         memory: Tensor,
@@ -169,7 +295,7 @@ class DINO(DeformableDETR):
             self.decoder.num_layers](
                 output_memory)
         enc_outputs_coord_unact = self.bbox_head.reg_branches[
-            self.decoder.num_layers](output_memory) + output_proposals
+            self.decoder.num_layers](output_memory)[..., :2] + output_proposals
 
         # NOTE The DINO selects top-k proposals according to scores of
         # multi-class classification, while DeformDETR, where the input
@@ -182,18 +308,26 @@ class DINO(DeformableDETR):
             topk_indices.unsqueeze(-1).repeat(1, 1, cls_out_features))
         topk_coords_unact = torch.gather(
             enc_outputs_coord_unact, 1,
-            topk_indices.unsqueeze(-1).repeat(1, 1, 4))
+            topk_indices.unsqueeze(-1).repeat(1, 1, 2))
         topk_coords = topk_coords_unact.sigmoid()
         topk_coords_unact = topk_coords_unact.detach()
 
         query = self.query_embedding.weight[:, None, :]
         query = query.repeat(1, bs, 1).transpose(0, 1)
-        if self.training:
-            dn_label_query, dn_bbox_query, dn_mask, dn_meta = \
+        if self.training and self.use_dn:
+            dn_label_query, dn_point_query, dn_mask, dn_meta = \
                 self.dn_query_generator(batch_data_samples)
-            query = torch.cat([dn_label_query, query], dim=1)
-            reference_points = torch.cat([dn_bbox_query, topk_coords_unact],
-                                         dim=1)
+        
+            query = torch.cat(
+                [dn_label_query, query],
+                dim=1)
+        
+            # Both DN points and matching points are now 2D
+            # inverse-sigmoid coordinates.
+            reference_points = torch.cat(
+                [dn_point_query, topk_coords_unact],
+                dim=1)
+        
         else:
             reference_points = topk_coords_unact
             dn_mask, dn_meta = None, None
@@ -274,7 +408,7 @@ class DINO(DeformableDETR):
             reg_branches=self.bbox_head.reg_branches,
             **kwargs)
 
-        if len(query) == self.num_queries:
+        if len(query) == self.num_queries and self.use_dn:
             # NOTE: This is to make sure label_embeding can be involved to
             # produce loss even if there is no denoising query (no ground truth
             # target in this GPU), otherwise, this will raise runtime error in

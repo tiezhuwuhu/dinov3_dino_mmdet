@@ -1,0 +1,226 @@
+_base_ = "./dino4_vits16_sta_model.py"
+
+
+data_root = (
+    "/root/autodl-tmp/dinov3_dino_mmdet/data/coco/"
+)
+
+strict_init_checkpoint = (
+    "/root/autodl-tmp/dinov3_dino_mmdet/checkpoints/merged/"
+    "dinov3_vits16_sta_resbridge_official_dino4_init.pth"
+)
+
+model_wrapper_cfg = dict(
+    type="NeckOnlyMMDistributedDataParallel",
+
+    # Only neck.* parameters are trainable.
+    trainable_prefix="neck.",
+
+    # Exact parameter count of the current ResidualMultiScaleBridge.
+    expected_trainable_params=2_534_912,
+
+    # Every trainable bridge parameter participates in the DINO loss.
+    find_unused_parameters=False,
+)
+
+
+model = dict(
+    backbone=dict(
+        frozen=True,
+        validate_outputs=False,
+    ),
+    neck=dict(
+        validate_inputs=False,
+    ),
+)
+
+
+train_pipeline = [
+    dict(
+        type="LoadImageFromFile",
+        backend_args=None,
+    ),
+    dict(
+        type="LoadAnnotations",
+        with_bbox=True,
+    ),
+    dict(
+        type="RandomFlip",
+        prob=0.5,
+    ),
+    dict(
+        type="Resize",
+        scale=(640, 640),
+        keep_ratio=True,
+    ),
+    dict(
+        type="Pad",
+        size=(640, 640),
+        pad_val=dict(
+            img=(114, 114, 114),
+        ),
+    ),
+    dict(
+        type="PackDetInputs",
+    ),
+]
+
+
+test_pipeline = [
+    dict(
+        type="LoadImageFromFile",
+        backend_args=None,
+    ),
+    dict(
+        type="Resize",
+        scale=(640, 640),
+        keep_ratio=True,
+    ),
+    dict(
+        type="Pad",
+        size=(640, 640),
+        pad_val=dict(
+            img=(114, 114, 114),
+        ),
+    ),
+    dict(
+        type="LoadAnnotations",
+        with_bbox=True,
+    ),
+    dict(
+        type="PackDetInputs",
+        meta_keys=(
+            "img_id",
+            "img_path",
+            "ori_shape",
+            "img_shape",
+            "scale_factor",
+        ),
+    ),
+]
+
+
+train_dataloader = dict(
+    batch_size=8,
+    num_workers=8,
+    persistent_workers=True,
+    pin_memory=True,
+    dataset=dict(
+        data_root=data_root,
+        pipeline=train_pipeline,
+    ),
+)
+
+
+val_dataloader = dict(
+    batch_size=1,
+    num_workers=4,
+    persistent_workers=True,
+    dataset=dict(
+        data_root=data_root,
+        pipeline=test_pipeline,
+    ),
+)
+
+
+test_dataloader = val_dataloader
+
+
+val_evaluator = dict(
+    ann_file=(
+        data_root
+        + "annotations/instances_val2017.json"
+    ),
+)
+
+
+test_evaluator = val_evaluator
+
+
+load_from = strict_init_checkpoint
+resume = False
+
+optim_wrapper = dict(
+    _delete_=True,
+
+    type="OptimWrapper",
+
+    optimizer=dict(
+        type="AdamW",
+
+        # Only ResidualMultiScaleBridge is updated.
+        lr=2.0e-4,
+
+        betas=(
+            0.9,
+            0.999,
+        ),
+
+        weight_decay=1.0e-4,
+    ),
+
+    # A non-empty paramwise_cfg makes MMEngine recursively collect
+    # parameters and skip requires_grad=False parameters.
+    paramwise_cfg=dict(
+        norm_decay_mult=0.0,
+    ),
+
+    clip_grad=dict(
+        max_norm=0.1,
+        norm_type=2,
+        error_if_nonfinite=True,
+    ),
+)
+
+
+param_scheduler = [
+    dict(
+        type="LinearLR",
+        start_factor=0.2,
+        begin=0,
+        end=500,
+        by_epoch=False,
+    ),
+]
+
+
+train_cfg = dict(
+    _delete_=True,
+    type="EpochBasedTrainLoop",
+    max_epochs=1,
+    val_interval=1,
+)
+
+
+custom_hooks = [
+    dict(
+        type="CheckInvalidLossHook",
+        interval=1,
+    ),
+]
+
+
+default_hooks = dict(
+    checkpoint=dict(
+        type="CheckpointHook",
+        interval=1,
+        max_keep_ckpts=1,
+        save_last=True,
+        save_optimizer=True,
+        save_param_scheduler=True,
+        save_best="coco/bbox_mAP",
+        rule="greater",
+    ),
+)
+
+
+auto_scale_lr = dict(
+    enable=False,
+    base_batch_size=16,
+)
+
+
+work_dir = (
+    "work_dirs/"
+    "dino4_vits16_sta_resbridge_only_640_1e"
+)

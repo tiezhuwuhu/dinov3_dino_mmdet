@@ -200,6 +200,14 @@ class Resize(MMCV_Resize):
             if self.clip_object_border:
                 results['gt_bboxes'].clip_(results['img_shape'])
 
+    def _resize_points(self, results: dict) -> None:
+        """Resize point annotations with results['scale_factor']."""
+        if results.get('gt_points', None) is not None:
+            w_scale, h_scale = results['scale_factor']
+    
+            results['gt_points'][:, 0] *= w_scale
+            results['gt_points'][:, 1] *= h_scale
+
     def _record_homography_matrix(self, results: dict) -> None:
         """Record the homography matrix for the Resize."""
         w_scale, h_scale = results['scale_factor']
@@ -230,6 +238,7 @@ class Resize(MMCV_Resize):
             results['scale'] = _scale_size(img_shape[::-1], self.scale_factor)
         self._resize_img(results)
         self._resize_bboxes(results)
+        self._resize_points(results)
         self._resize_masks(results)
         self._resize_seg(results)
         self._record_homography_matrix(results)
@@ -578,6 +587,24 @@ class RandomFlip(MMCV_RandomFlip):
 
         img_shape = results['img'].shape[:2]
 
+        if results.get('gt_points', None) is not None:
+            h, w = img_shape
+            direction = results['flip_direction']
+        
+            if direction == 'horizontal':
+                results['gt_points'][:, 0] = \
+                    w - 1 - results['gt_points'][:, 0]
+        
+            elif direction == 'vertical':
+                results['gt_points'][:, 1] = \
+                    h - 1 - results['gt_points'][:, 1]
+        
+            elif direction == 'diagonal':
+                results['gt_points'][:, 0] = \
+                    w - 1 - results['gt_points'][:, 0]
+                results['gt_points'][:, 1] = \
+                    h - 1 - results['gt_points'][:, 1]
+
         # flip bboxes
         if results.get('gt_bboxes', None) is not None:
             results['gt_bboxes'].flip_(img_shape, results['flip_direction'])
@@ -910,6 +937,39 @@ class RandomCrop(BaseTransform):
         img_shape = img.shape
         results['img'] = img
         results['img_shape'] = img_shape[:2]
+
+        # crop points accordingly
+        if results.get('gt_points', None) is not None:
+            points = results['gt_points'].copy()
+        
+            # Translate point coordinates to the cropped image coordinate system.
+            points[:, 0] -= offset_w
+            points[:, 1] -= offset_h
+        
+            crop_h, crop_w = img_shape[:2]
+        
+            # Keep only points inside the cropped image.
+            valid_inds = (
+                (points[:, 0] >= 0) &
+                (points[:, 0] < crop_w) &
+                (points[:, 1] >= 0) &
+                (points[:, 1] < crop_h)
+            )
+        
+            # Same behavior as bbox crop:
+            # reject this crop if no target remains and negative crop is forbidden.
+            if (not valid_inds.any() and not allow_negative_crop):
+                return None
+        
+            results['gt_points'] = points[valid_inds]
+        
+            if results.get('gt_points_labels', None) is not None:
+                results['gt_points_labels'] = \
+                    results['gt_points_labels'][valid_inds]
+        
+            if results.get('gt_ignore_flags', None) is not None:
+                results['gt_ignore_flags'] = \
+                    results['gt_ignore_flags'][valid_inds]
 
         # crop bboxes accordingly and clip to the image boundary
         if results.get('gt_bboxes', None) is not None:
