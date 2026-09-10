@@ -257,12 +257,14 @@ class LoadAnnotations(MMCV_LoadAnnotations):
             with_mask: bool = False,
             poly2mask: bool = True,
             box_type: str = 'hbox',
+            with_point: bool = False,
             # use for semseg
             reduce_zero_label: bool = False,
             ignore_index: int = 255,
             **kwargs) -> None:
         super(LoadAnnotations, self).__init__(**kwargs)
         self.with_mask = with_mask
+        self.with_point = with_point
         self.poly2mask = poly2mask
         self.box_type = box_type
         self.reduce_zero_label = reduce_zero_label
@@ -288,6 +290,33 @@ class LoadAnnotations(MMCV_LoadAnnotations):
             _, box_type_cls = get_box_type(self.box_type)
             results['gt_bboxes'] = box_type_cls(gt_bboxes, dtype=torch.float32)
         results['gt_ignore_flags'] = np.array(gt_ignore_flags, dtype=bool)
+
+    def _load_points(self, results: dict) -> None:
+        """Load point annotations for Point-DINO.
+    
+        Each instance should contain:
+            point: [x, y]
+            point_label: int
+            ignore_flag: int
+        """
+    
+        gt_points = []
+        gt_points_labels = []
+        gt_ignore_flags = []
+    
+        for instance in results.get('instances', []):
+            gt_points.append(instance['point'])
+            gt_points_labels.append(instance['point_label'])
+            gt_ignore_flags.append(instance.get('ignore_flag', 0))
+    
+        results['gt_points'] = np.array(
+            gt_points, dtype=np.float32).reshape((-1, 2))
+    
+        results['gt_points_labels'] = np.array(
+            gt_points_labels, dtype=np.int64)
+    
+        results['gt_ignore_flags'] = np.array(
+            gt_ignore_flags, dtype=bool)
 
     def _load_labels(self, results: dict) -> None:
         """Private function to load label annotations.
@@ -447,6 +476,8 @@ class LoadAnnotations(MMCV_LoadAnnotations):
             self._load_masks(results)
         if self.with_seg:
             self._load_seg_map(results)
+        if self.with_point:
+            self._load_points(results)
         return results
 
     def __repr__(self) -> str:

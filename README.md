@@ -1,455 +1,881 @@
-<div align="center">
-  <img src="resources/mmdet-logo.png" width="600"/>
-  <div>&nbsp;</div>
-  <div align="center">
-    <b><font size="5">OpenMMLab website</font></b>
-    <sup>
-      <a href="https://openmmlab.com">
-        <i><font size="4">HOT</font></i>
-      </a>
-    </sup>
-    &nbsp;&nbsp;&nbsp;&nbsp;
-    <b><font size="5">OpenMMLab platform</font></b>
-    <sup>
-      <a href="https://platform.openmmlab.com">
-        <i><font size="4">TRY IT OUT</font></i>
-      </a>
-    </sup>
-  </div>
-  <div>&nbsp;</div>
+# Point-DINO Stage 4 README
 
-[![PyPI](https://img.shields.io/pypi/v/mmdet)](https://pypi.org/project/mmdet)
-[![docs](https://img.shields.io/badge/docs-latest-blue)](https://mmdetection.readthedocs.io/en/latest/)
-[![badge](https://github.com/open-mmlab/mmdetection/workflows/build/badge.svg)](https://github.com/open-mmlab/mmdetection/actions)
-[![codecov](https://codecov.io/gh/open-mmlab/mmdetection/branch/main/graph/badge.svg)](https://codecov.io/gh/open-mmlab/mmdetection)
-[![license](https://img.shields.io/github/license/open-mmlab/mmdetection.svg)](https://github.com/open-mmlab/mmdetection/blob/main/LICENSE)
-[![open issues](https://isitmaintained.com/badge/open/open-mmlab/mmdetection.svg)](https://github.com/open-mmlab/mmdetection/issues)
-[![issue resolution](https://isitmaintained.com/badge/resolution/open-mmlab/mmdetection.svg)](https://github.com/open-mmlab/mmdetection/issues)
-[![Open in OpenXLab](https://cdn-static.openxlab.org.cn/app-center/openxlab_demo.svg)](https://openxlab.org.cn/apps?search=mmdet)
+## 1. Stage 4 目标
 
-[📘Documentation](https://mmdetection.readthedocs.io/en/latest/) |
-[🛠️Installation](https://mmdetection.readthedocs.io/en/latest/get_started.html) |
-[👀Model Zoo](https://mmdetection.readthedocs.io/en/latest/model_zoo.html) |
-[🆕Update News](https://mmdetection.readthedocs.io/en/latest/notes/changelog.html) |
-[🚀Ongoing Projects](https://github.com/open-mmlab/mmdetection/projects) |
-[🤔Reporting Issues](https://github.com/open-mmlab/mmdetection/issues/new/choose)
+Stage 4 的目标是在 **不改变 Point-DINO 最终任务形式** 的前提下，引入 FIDT（Focal Inverse Distance Transform）式空间监督，验证 dense spatial supervision 是否能够提升最终的 query-based point localization。
 
-</div>
+Point-DINO 的最终预测仍保持为：
 
-<div align="center">
+\[
+\{(\hat{x}_i,\hat{y}_i,\hat{s}_i)\}_{i=1}^{N_q}
+\]
 
-English | [简体中文](README_zh-CN.md)
+即每个 query 直接预测二维点坐标 `(x, y)` 和分类置信度。
 
-</div>
+Stage 4 **没有**恢复 bbox、没有使用伪框、没有使用固定宽高，也没有把任务改成 density-map prediction。FIDT map 仅作为训练辅助监督，推理阶段最终输出仍然是 query point set。
 
-<div align="center">
-  <a href="https://openmmlab.medium.com/" style="text-decoration:none;">
-    <img src="https://user-images.githubusercontent.com/25839884/219255827-67c1a27f-f8c5-46a9-811d-5e57448c61d1.png" width="3%" alt="" /></a>
-  <img src="https://user-images.githubusercontent.com/25839884/218346358-56cc8e2f-a2b8-487f-9088-32480cceabcf.png" width="3%" alt="" />
-  <a href="https://discord.com/channels/1037617289144569886/1046608014234370059" style="text-decoration:none;">
-    <img src="https://user-images.githubusercontent.com/25839884/218347213-c080267f-cbb6-443e-8532-8e1ed9a58ea9.png" width="3%" alt="" /></a>
-  <img src="https://user-images.githubusercontent.com/25839884/218346358-56cc8e2f-a2b8-487f-9088-32480cceabcf.png" width="3%" alt="" />
-  <a href="https://twitter.com/OpenMMLab" style="text-decoration:none;">
-    <img src="https://user-images.githubusercontent.com/25839884/218346637-d30c8a0f-3eba-4699-8131-512fb06d46db.png" width="3%" alt="" /></a>
-  <img src="https://user-images.githubusercontent.com/25839884/218346358-56cc8e2f-a2b8-487f-9088-32480cceabcf.png" width="3%" alt="" />
-  <a href="https://www.youtube.com/openmmlab" style="text-decoration:none;">
-    <img src="https://user-images.githubusercontent.com/25839884/218346691-ceb2116a-465a-40af-8424-9f30d2348ca9.png" width="3%" alt="" /></a>
-  <img src="https://user-images.githubusercontent.com/25839884/218346358-56cc8e2f-a2b8-487f-9088-32480cceabcf.png" width="3%" alt="" />
-  <a href="https://space.bilibili.com/1293512903" style="text-decoration:none;">
-    <img src="https://user-images.githubusercontent.com/25839884/219026751-d7d14cce-a7c9-4e82-9942-8375fca65b99.png" width="3%" alt="" /></a>
-  <img src="https://user-images.githubusercontent.com/25839884/218346358-56cc8e2f-a2b8-487f-9088-32480cceabcf.png" width="3%" alt="" />
-  <a href="https://www.zhihu.com/people/openmmlab" style="text-decoration:none;">
-    <img src="https://user-images.githubusercontent.com/25839884/219026120-ba71e48b-6e94-4bd4-b4e9-b7d175b5e362.png" width="3%" alt="" /></a>
-</div>
-
-<div align="center">
-<img src="https://github.com/open-mmlab/mmdetection/assets/17425982/6c29886f-ae7a-4a55-8be4-352ee85b7d3e"/>
-</div>
-
-## Introduction
-
-MMDetection is an open source object detection toolbox based on PyTorch. It is
-a part of the [OpenMMLab](https://openmmlab.com/) project.
-
-The main branch works with **PyTorch 1.8+**.
-
-<img src="https://user-images.githubusercontent.com/12907710/187674113-2074d658-f2fb-42d1-ac15-9c4a695e64d7.png"/>
-
-<details open>
-<summary>Major features</summary>
-
-- **Modular Design**
-
-  We decompose the detection framework into different components and one can easily construct a customized object detection framework by combining different modules.
-
-- **Support of multiple tasks out of box**
-
-  The toolbox directly supports multiple detection tasks such as **object detection**, **instance segmentation**, **panoptic segmentation**, and **semi-supervised object detection**.
-
-- **High efficiency**
-
-  All basic bbox and mask operations run on GPUs. The training speed is faster than or comparable to other codebases, including [Detectron2](https://github.com/facebookresearch/detectron2), [maskrcnn-benchmark](https://github.com/facebookresearch/maskrcnn-benchmark) and [SimpleDet](https://github.com/TuSimple/simpledet).
-
-- **State of the art**
-
-  The toolbox stems from the codebase developed by the *MMDet* team, who won [COCO Detection Challenge](http://cocodataset.org/#detection-leaderboard) in 2018, and we keep pushing it forward.
-  The newly released [RTMDet](configs/rtmdet) also obtains new state-of-the-art results on real-time instance segmentation and rotated object detection tasks and the best parameter-accuracy trade-off on object detection.
-
-</details>
-
-Apart from MMDetection, we also released [MMEngine](https://github.com/open-mmlab/mmengine) for model training and [MMCV](https://github.com/open-mmlab/mmcv) for computer vision research, which are heavily depended on by this toolbox.
-
-## What's New
-
-💎 **We have released the pre-trained weights for MM-Grounding-DINO Swin-B and Swin-L, welcome to try and give feedback.**
-
-### Highlight
-
-**v3.3.0** was released in 5/1/2024:
-
-**[MM-Grounding-DINO: An Open and Comprehensive Pipeline for Unified Object Grounding and Detection](https://arxiv.org/abs/2401.02361)**
-
-Grounding DINO is a grounding pre-training model that unifies 2d open vocabulary object detection and phrase grounding, with wide applications. However, its training part has not been open sourced. Therefore, we propose MM-Grounding-DINO, which not only serves as an open source replication version of Grounding DINO, but also achieves significant performance improvement based on reconstructed data types, exploring different dataset combinations and initialization strategies. Moreover, we conduct evaluations from multiple dimensions, including OOD, REC, Phrase Grounding, OVD, and Fine-tune, to fully excavate the advantages and disadvantages of Grounding pre-training, hoping to provide inspiration for future work.
-
-code: [mm_grounding_dino/README.md](configs/mm_grounding_dino/README.md)
-
-<div align=center>
-<img src="https://github.com/open-mmlab/mmdetection/assets/17425982/fb14d1ee-5469-44d2-b865-aac9850c429c"/>
-</div>
-
-We are excited to announce our latest work on real-time object recognition tasks, **RTMDet**, a family of fully convolutional single-stage detectors. RTMDet not only achieves the best parameter-accuracy trade-off on object detection from tiny to extra-large model sizes but also obtains new state-of-the-art performance on instance segmentation and rotated object detection tasks. Details can be found in the [technical report](https://arxiv.org/abs/2212.07784). Pre-trained models are [here](configs/rtmdet).
-
-[![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/rtmdet-an-empirical-study-of-designing-real/real-time-instance-segmentation-on-mscoco)](https://paperswithcode.com/sota/real-time-instance-segmentation-on-mscoco?p=rtmdet-an-empirical-study-of-designing-real)
-[![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/rtmdet-an-empirical-study-of-designing-real/object-detection-in-aerial-images-on-dota-1)](https://paperswithcode.com/sota/object-detection-in-aerial-images-on-dota-1?p=rtmdet-an-empirical-study-of-designing-real)
-[![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/rtmdet-an-empirical-study-of-designing-real/object-detection-in-aerial-images-on-hrsc2016)](https://paperswithcode.com/sota/object-detection-in-aerial-images-on-hrsc2016?p=rtmdet-an-empirical-study-of-designing-real)
-
-| Task                     | Dataset | AP                                   | FPS(TRT FP16 BS1 3090) |
-| ------------------------ | ------- | ------------------------------------ | ---------------------- |
-| Object Detection         | COCO    | 52.8                                 | 322                    |
-| Instance Segmentation    | COCO    | 44.6                                 | 188                    |
-| Rotated Object Detection | DOTA    | 78.9(single-scale)/81.3(multi-scale) | 121                    |
-
-<div align=center>
-<img src="https://user-images.githubusercontent.com/12907710/208044554-1e8de6b5-48d8-44e4-a7b5-75076c7ebb71.png"/>
-</div>
-
-## Installation
-
-Please refer to [Installation](https://mmdetection.readthedocs.io/en/latest/get_started.html) for installation instructions.
-
-## Getting Started
-
-Please see [Overview](https://mmdetection.readthedocs.io/en/latest/get_started.html) for the general introduction of MMDetection.
-
-For detailed user guides and advanced guides, please refer to our [documentation](https://mmdetection.readthedocs.io/en/latest/):
-
-- User Guides
-
-  <details>
-
-  - [Train & Test](https://mmdetection.readthedocs.io/en/latest/user_guides/index.html#train-test)
-    - [Learn about Configs](https://mmdetection.readthedocs.io/en/latest/user_guides/config.html)
-    - [Inference with existing models](https://mmdetection.readthedocs.io/en/latest/user_guides/inference.html)
-    - [Dataset Prepare](https://mmdetection.readthedocs.io/en/latest/user_guides/dataset_prepare.html)
-    - [Test existing models on standard datasets](https://mmdetection.readthedocs.io/en/latest/user_guides/test.html)
-    - [Train predefined models on standard datasets](https://mmdetection.readthedocs.io/en/latest/user_guides/train.html)
-    - [Train with customized datasets](https://mmdetection.readthedocs.io/en/latest/user_guides/train.html#train-with-customized-datasets)
-    - [Train with customized models and standard datasets](https://mmdetection.readthedocs.io/en/latest/user_guides/new_model.html)
-    - [Finetuning Models](https://mmdetection.readthedocs.io/en/latest/user_guides/finetune.html)
-    - [Test Results Submission](https://mmdetection.readthedocs.io/en/latest/user_guides/test_results_submission.html)
-    - [Weight initialization](https://mmdetection.readthedocs.io/en/latest/user_guides/init_cfg.html)
-    - [Use a single stage detector as RPN](https://mmdetection.readthedocs.io/en/latest/user_guides/single_stage_as_rpn.html)
-    - [Semi-supervised Object Detection](https://mmdetection.readthedocs.io/en/latest/user_guides/semi_det.html)
-  - [Useful Tools](https://mmdetection.readthedocs.io/en/latest/user_guides/index.html#useful-tools)
-
-  </details>
-
-- Advanced Guides
-
-  <details>
-
-  - [Basic Concepts](https://mmdetection.readthedocs.io/en/latest/advanced_guides/index.html#basic-concepts)
-  - [Component Customization](https://mmdetection.readthedocs.io/en/latest/advanced_guides/index.html#component-customization)
-  - [How to](https://mmdetection.readthedocs.io/en/latest/advanced_guides/index.html#how-to)
-
-  </details>
-
-We also provide object detection colab tutorial [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](demo/MMDet_Tutorial.ipynb) and instance segmentation colab tutorial [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](demo/MMDet_InstanceSeg_Tutorial.ipynb).
-
-To migrate from MMDetection 2.x, please refer to [migration](https://mmdetection.readthedocs.io/en/latest/migration.html).
-
-## Overview of Benchmark and Model Zoo
-
-Results and models are available in the [model zoo](docs/en/model_zoo.md).
-
-<div align="center">
-  <b>Architectures</b>
-</div>
-<table align="center">
-  <tbody>
-    <tr align="center" valign="bottom">
-      <td>
-        <b>Object Detection</b>
-      </td>
-      <td>
-        <b>Instance Segmentation</b>
-      </td>
-      <td>
-        <b>Panoptic Segmentation</b>
-      </td>
-      <td>
-        <b>Other</b>
-      </td>
-    </tr>
-    <tr valign="top">
-      <td>
-        <ul>
-            <li><a href="configs/fast_rcnn">Fast R-CNN (ICCV'2015)</a></li>
-            <li><a href="configs/faster_rcnn">Faster R-CNN (NeurIPS'2015)</a></li>
-            <li><a href="configs/rpn">RPN (NeurIPS'2015)</a></li>
-            <li><a href="configs/ssd">SSD (ECCV'2016)</a></li>
-            <li><a href="configs/retinanet">RetinaNet (ICCV'2017)</a></li>
-            <li><a href="configs/cascade_rcnn">Cascade R-CNN (CVPR'2018)</a></li>
-            <li><a href="configs/yolo">YOLOv3 (ArXiv'2018)</a></li>
-            <li><a href="configs/cornernet">CornerNet (ECCV'2018)</a></li>
-            <li><a href="configs/grid_rcnn">Grid R-CNN (CVPR'2019)</a></li>
-            <li><a href="configs/guided_anchoring">Guided Anchoring (CVPR'2019)</a></li>
-            <li><a href="configs/fsaf">FSAF (CVPR'2019)</a></li>
-            <li><a href="configs/centernet">CenterNet (CVPR'2019)</a></li>
-            <li><a href="configs/libra_rcnn">Libra R-CNN (CVPR'2019)</a></li>
-            <li><a href="configs/tridentnet">TridentNet (ICCV'2019)</a></li>
-            <li><a href="configs/fcos">FCOS (ICCV'2019)</a></li>
-            <li><a href="configs/reppoints">RepPoints (ICCV'2019)</a></li>
-            <li><a href="configs/free_anchor">FreeAnchor (NeurIPS'2019)</a></li>
-            <li><a href="configs/cascade_rpn">CascadeRPN (NeurIPS'2019)</a></li>
-            <li><a href="configs/foveabox">Foveabox (TIP'2020)</a></li>
-            <li><a href="configs/double_heads">Double-Head R-CNN (CVPR'2020)</a></li>
-            <li><a href="configs/atss">ATSS (CVPR'2020)</a></li>
-            <li><a href="configs/nas_fcos">NAS-FCOS (CVPR'2020)</a></li>
-            <li><a href="configs/centripetalnet">CentripetalNet (CVPR'2020)</a></li>
-            <li><a href="configs/autoassign">AutoAssign (ArXiv'2020)</a></li>
-            <li><a href="configs/sabl">Side-Aware Boundary Localization (ECCV'2020)</a></li>
-            <li><a href="configs/dynamic_rcnn">Dynamic R-CNN (ECCV'2020)</a></li>
-            <li><a href="configs/detr">DETR (ECCV'2020)</a></li>
-            <li><a href="configs/paa">PAA (ECCV'2020)</a></li>
-            <li><a href="configs/vfnet">VarifocalNet (CVPR'2021)</a></li>
-            <li><a href="configs/sparse_rcnn">Sparse R-CNN (CVPR'2021)</a></li>
-            <li><a href="configs/yolof">YOLOF (CVPR'2021)</a></li>
-            <li><a href="configs/yolox">YOLOX (CVPR'2021)</a></li>
-            <li><a href="configs/deformable_detr">Deformable DETR (ICLR'2021)</a></li>
-            <li><a href="configs/tood">TOOD (ICCV'2021)</a></li>
-            <li><a href="configs/ddod">DDOD (ACM MM'2021)</a></li>
-            <li><a href="configs/rtmdet">RTMDet (ArXiv'2022)</a></li>
-            <li><a href="configs/conditional_detr">Conditional DETR (ICCV'2021)</a></li>
-            <li><a href="configs/dab_detr">DAB-DETR (ICLR'2022)</a></li>
-            <li><a href="configs/dino">DINO (ICLR'2023)</a></li>
-            <li><a href="configs/glip">GLIP (CVPR'2022)</a></li>
-            <li><a href="configs/ddq">DDQ (CVPR'2023)</a></li>
-            <li><a href="projects/DiffusionDet">DiffusionDet (ArXiv'2023)</a></li>
-            <li><a href="projects/EfficientDet">EfficientDet (CVPR'2020)</a></li>
-            <li><a href="projects/ViTDet">ViTDet (ECCV'2022)</a></li>
-            <li><a href="projects/Detic">Detic (ECCV'2022)</a></li>
-            <li><a href="projects/CO-DETR">CO-DETR (ICCV'2023)</a></li>
-      </ul>
-      </td>
-      <td>
-        <ul>
-          <li><a href="configs/mask_rcnn">Mask R-CNN (ICCV'2017)</a></li>
-          <li><a href="configs/cascade_rcnn">Cascade Mask R-CNN (CVPR'2018)</a></li>
-          <li><a href="configs/ms_rcnn">Mask Scoring R-CNN (CVPR'2019)</a></li>
-          <li><a href="configs/htc">Hybrid Task Cascade (CVPR'2019)</a></li>
-          <li><a href="configs/yolact">YOLACT (ICCV'2019)</a></li>
-          <li><a href="configs/instaboost">InstaBoost (ICCV'2019)</a></li>
-          <li><a href="configs/solo">SOLO (ECCV'2020)</a></li>
-          <li><a href="configs/point_rend">PointRend (CVPR'2020)</a></li>
-          <li><a href="configs/detectors">DetectoRS (ArXiv'2020)</a></li>
-          <li><a href="configs/solov2">SOLOv2 (NeurIPS'2020)</a></li>
-          <li><a href="configs/scnet">SCNet (AAAI'2021)</a></li>
-          <li><a href="configs/queryinst">QueryInst (ICCV'2021)</a></li>
-          <li><a href="configs/mask2former">Mask2Former (ArXiv'2021)</a></li>
-          <li><a href="configs/condinst">CondInst (ECCV'2020)</a></li>
-          <li><a href="projects/SparseInst">SparseInst (CVPR'2022)</a></li>
-          <li><a href="configs/rtmdet">RTMDet (ArXiv'2022)</a></li>
-          <li><a href="configs/boxinst">BoxInst (CVPR'2021)</a></li>
-          <li><a href="projects/ConvNeXt-V2">ConvNeXt-V2 (Arxiv'2023)</a></li>
-        </ul>
-      </td>
-      <td>
-        <ul>
-          <li><a href="configs/panoptic_fpn">Panoptic FPN (CVPR'2019)</a></li>
-          <li><a href="configs/maskformer">MaskFormer (NeurIPS'2021)</a></li>
-          <li><a href="configs/mask2former">Mask2Former (ArXiv'2021)</a></li>
-          <li><a href="configs/XDecoder">XDecoder (CVPR'2023)</a></li>
-        </ul>
-      </td>
-      <td>
-        </ul>
-          <li><b>Contrastive Learning</b></li>
-        <ul>
-        <ul>
-          <li><a href="configs/selfsup_pretrain">SwAV (NeurIPS'2020)</a></li>
-          <li><a href="configs/selfsup_pretrain">MoCo (CVPR'2020)</a></li>
-          <li><a href="configs/selfsup_pretrain">MoCov2 (ArXiv'2020)</a></li>
-        </ul>
-        </ul>
-        </ul>
-          <li><b>Distillation</b></li>
-        <ul>
-        <ul>
-          <li><a href="configs/ld">Localization Distillation (CVPR'2022)</a></li>
-          <li><a href="configs/lad">Label Assignment Distillation (WACV'2022)</a></li>
-        </ul>
-        </ul>
-          <li><b>Semi-Supervised Object Detection</b></li>
-        <ul>
-        <ul>
-          <li><a href="configs/soft_teacher">Soft Teacher (ICCV'2021)</a></li>
-        </ul>
-        </ul>
-      </ul>
-      </td>
-    </tr>
-</td>
-    </tr>
-  </tbody>
-</table>
-
-<div align="center">
-  <b>Components</b>
-</div>
-<table align="center">
-  <tbody>
-    <tr align="center" valign="bottom">
-      <td>
-        <b>Backbones</b>
-      </td>
-      <td>
-        <b>Necks</b>
-      </td>
-      <td>
-        <b>Loss</b>
-      </td>
-      <td>
-        <b>Common</b>
-      </td>
-    </tr>
-    <tr valign="top">
-      <td>
-      <ul>
-        <li>VGG (ICLR'2015)</li>
-        <li>ResNet (CVPR'2016)</li>
-        <li>ResNeXt (CVPR'2017)</li>
-        <li>MobileNetV2 (CVPR'2018)</li>
-        <li><a href="configs/hrnet">HRNet (CVPR'2019)</a></li>
-        <li><a href="configs/empirical_attention">Generalized Attention (ICCV'2019)</a></li>
-        <li><a href="configs/gcnet">GCNet (ICCVW'2019)</a></li>
-        <li><a href="configs/res2net">Res2Net (TPAMI'2020)</a></li>
-        <li><a href="configs/regnet">RegNet (CVPR'2020)</a></li>
-        <li><a href="configs/resnest">ResNeSt (ArXiv'2020)</a></li>
-        <li><a href="configs/pvt">PVT (ICCV'2021)</a></li>
-        <li><a href="configs/swin">Swin (CVPR'2021)</a></li>
-        <li><a href="configs/pvt">PVTv2 (ArXiv'2021)</a></li>
-        <li><a href="configs/resnet_strikes_back">ResNet strikes back (ArXiv'2021)</a></li>
-        <li><a href="configs/efficientnet">EfficientNet (ArXiv'2021)</a></li>
-        <li><a href="configs/convnext">ConvNeXt (CVPR'2022)</a></li>
-        <li><a href="projects/ConvNeXt-V2">ConvNeXtv2 (ArXiv'2023)</a></li>
-      </ul>
-      </td>
-      <td>
-      <ul>
-        <li><a href="configs/pafpn">PAFPN (CVPR'2018)</a></li>
-        <li><a href="configs/nas_fpn">NAS-FPN (CVPR'2019)</a></li>
-        <li><a href="configs/carafe">CARAFE (ICCV'2019)</a></li>
-        <li><a href="configs/fpg">FPG (ArXiv'2020)</a></li>
-        <li><a href="configs/groie">GRoIE (ICPR'2020)</a></li>
-        <li><a href="configs/dyhead">DyHead (CVPR'2021)</a></li>
-      </ul>
-      </td>
-      <td>
-        <ul>
-          <li><a href="configs/ghm">GHM (AAAI'2019)</a></li>
-          <li><a href="configs/gfl">Generalized Focal Loss (NeurIPS'2020)</a></li>
-          <li><a href="configs/seesaw_loss">Seasaw Loss (CVPR'2021)</a></li>
-        </ul>
-      </td>
-      <td>
-        <ul>
-          <li><a href="configs/faster_rcnn/faster-rcnn_r50_fpn_ohem_1x_coco.py">OHEM (CVPR'2016)</a></li>
-          <li><a href="configs/gn">Group Normalization (ECCV'2018)</a></li>
-          <li><a href="configs/dcn">DCN (ICCV'2017)</a></li>
-          <li><a href="configs/dcnv2">DCNv2 (CVPR'2019)</a></li>
-          <li><a href="configs/gn+ws">Weight Standardization (ArXiv'2019)</a></li>
-          <li><a href="configs/pisa">Prime Sample Attention (CVPR'2020)</a></li>
-          <li><a href="configs/strong_baselines">Strong Baselines (CVPR'2021)</a></li>
-          <li><a href="configs/resnet_strikes_back">Resnet strikes back (ArXiv'2021)</a></li>
-        </ul>
-      </td>
-    </tr>
-</td>
-    </tr>
-  </tbody>
-</table>
-
-Some other methods are also supported in [projects using MMDetection](./docs/en/notes/projects.md).
-
-## FAQ
-
-Please refer to [FAQ](docs/en/notes/faq.md) for frequently asked questions.
-
-## Contributing
-
-We appreciate all contributions to improve MMDetection. Ongoing projects can be found in out [GitHub Projects](https://github.com/open-mmlab/mmdetection/projects). Welcome community users to participate in these projects. Please refer to [CONTRIBUTING.md](.github/CONTRIBUTING.md) for the contributing guideline.
-
-## Acknowledgement
-
-MMDetection is an open source project that is contributed by researchers and engineers from various colleges and companies. We appreciate all the contributors who implement their methods or add new features, as well as users who give valuable feedbacks.
-We wish that the toolbox and benchmark could serve the growing research community by providing a flexible toolkit to reimplement existing methods and develop their own new detectors.
-
-## Citation
-
-If you use this toolbox or benchmark in your research, please cite this project.
-
-```
-@article{mmdetection,
-  title   = {{MMDetection}: Open MMLab Detection Toolbox and Benchmark},
-  author  = {Chen, Kai and Wang, Jiaqi and Pang, Jiangmiao and Cao, Yuhang and
-             Xiong, Yu and Li, Xiaoxiao and Sun, Shuyang and Feng, Wansen and
-             Liu, Ziwei and Xu, Jiarui and Zhang, Zheng and Cheng, Dazhi and
-             Zhu, Chenchen and Cheng, Tianheng and Zhao, Qijie and Li, Buyu and
-             Lu, Xin and Zhu, Rui and Wu, Yue and Dai, Jifeng and Wang, Jingdong
-             and Shi, Jianping and Ouyang, Wanli and Loy, Chen Change and Lin, Dahua},
-  journal= {arXiv preprint arXiv:1906.07155},
-  year={2019}
-}
+```text
+Backbone / Neck
+      │
+      ├──────────────→ DINO Transformer → Queries → (x, y)   [最终输出]
+      │
+      └──────────────→ FIDT Auxiliary Head → FIDT Map        [仅训练辅助]
 ```
 
-## License
+---
 
-This project is released under the [Apache 2.0 license](LICENSE).
+## 2. Stage 4 基线设置
 
-## Projects in OpenMMLab
+Stage 4 延续 Stage 3 已确定的 Point-DINO 主干配置：
 
-- [MMEngine](https://github.com/open-mmlab/mmengine): OpenMMLab foundational library for training deep learning models.
-- [MMCV](https://github.com/open-mmlab/mmcv): OpenMMLab foundational library for computer vision.
-- [MMPreTrain](https://github.com/open-mmlab/mmpretrain): OpenMMLab pre-training toolbox and benchmark.
-- [MMagic](https://github.com/open-mmlab/mmagic): Open**MM**Lab **A**dvanced, **G**enerative and **I**ntelligent **C**reation toolbox.
-- [MMDetection](https://github.com/open-mmlab/mmdetection): OpenMMLab detection toolbox and benchmark.
-- [MMDetection3D](https://github.com/open-mmlab/mmdetection3d): OpenMMLab's next-generation platform for general 3D object detection.
-- [MMRotate](https://github.com/open-mmlab/mmrotate): OpenMMLab rotated object detection toolbox and benchmark.
-- [MMYOLO](https://github.com/open-mmlab/mmyolo): OpenMMLab YOLO series toolbox and benchmark.
-- [MMSegmentation](https://github.com/open-mmlab/mmsegmentation): OpenMMLab semantic segmentation toolbox and benchmark.
-- [MMOCR](https://github.com/open-mmlab/mmocr): OpenMMLab text detection, recognition, and understanding toolbox.
-- [MMPose](https://github.com/open-mmlab/mmpose): OpenMMLab pose estimation toolbox and benchmark.
-- [MMHuman3D](https://github.com/open-mmlab/mmhuman3d): OpenMMLab 3D human parametric model toolbox and benchmark.
-- [MMSelfSup](https://github.com/open-mmlab/mmselfsup): OpenMMLab self-supervised learning toolbox and benchmark.
-- [MMRazor](https://github.com/open-mmlab/mmrazor): OpenMMLab model compression toolbox and benchmark.
-- [MMFewShot](https://github.com/open-mmlab/mmfewshot): OpenMMLab fewshot learning toolbox and benchmark.
-- [MMAction2](https://github.com/open-mmlab/mmaction2): OpenMMLab's next-generation action understanding toolbox and benchmark.
-- [MMTracking](https://github.com/open-mmlab/mmtracking): OpenMMLab video perception toolbox and benchmark.
-- [MMFlow](https://github.com/open-mmlab/mmflow): OpenMMLab optical flow toolbox and benchmark.
-- [MMEditing](https://github.com/open-mmlab/mmediting): OpenMMLab image and video editing toolbox.
-- [MMGeneration](https://github.com/open-mmlab/mmgeneration): OpenMMLab image and video generative models toolbox.
-- [MMDeploy](https://github.com/open-mmlab/mmdeploy): OpenMMLab model deployment framework.
-- [MIM](https://github.com/open-mmlab/mim): MIM installs OpenMMLab packages.
-- [MMEval](https://github.com/open-mmlab/mmeval): A unified evaluation library for multiple machine learning libraries.
-- [Playground](https://github.com/open-mmlab/playground): A central hub for gathering and showcasing amazing projects built upon OpenMMLab.
+```text
+num_classes                 = 1
+num_queries                 = 900
+Point L1 loss weight        = 5
+Euclidean point loss weight = 0.20
+Hungarian FocalLossCost     = 2
+Hungarian PointL1Cost       = 20
+Point DN noise scale        = 0.01
+```
+
+Stage 4 的核心新增项只有 FIDT auxiliary supervision。
+
+---
+
+## 3. Stage 4 主要代码改动
+
+### 3.1 新增 FIDT Auxiliary Head
+
+主要文件：
+
+```text
+mmdet/models/dense_heads/point_fidt_aux_head.py
+```
+
+FIDT auxiliary head 从 DINO 使用的最高分辨率多尺度特征 `mlvl_feats[0]` 生成 dense FIDT prediction map。
+
+在 ShanghaiTech Part B 原生 `1024×768` 输入下，实测 feature shapes：
+
+```text
+level 0: [B, 256, 96, 128]   stride 8
+level 1: [B, 256, 48, 64]    stride 16
+level 2: [B, 256, 24, 32]    stride 32
+level 3: [B, 256, 12, 16]    stride 64
+```
+
+FIDT head：
+
+```text
+[B, 256, H/8, W/8]
+        ↓
+Conv 3×3 + GN + ReLU
+        ↓
+Bilinear Upsample ×2
+        ↓
+Conv 3×3 + GN + ReLU
+        ↓
+Conv 1×1
+        ↓
+Sigmoid
+        ↓
+[B, 1, H/4, W/4]
+```
+
+因此在 `1024×768` 输入下：
+
+```text
+FIDT output = [B, 1, 192, 256]
+```
+
+对应 stride 4。
+
+### 3.2 FIDT Target
+
+Stage 4 使用 FIDT 形式：
+
+\[
+T(x,y)=\frac{1}{D(x,y)^{\gamma D(x,y)+\phi}+\xi}
+\]
+
+其中：
+
+\[
+\gamma=0.02,\qquad \phi=0.75,\qquad \xi=1
+\]
+
+`D(x,y)` 表示当前位置到最近 GT point 的欧氏距离。
+
+Target 根据经过当前数据增强后的 float GT points 在线生成。
+
+FIDT feature cell `(u,v)` 使用 cell center 映射到当前 padded image：
+
+\[
+x=(u+0.5)\frac{W_{pad}}{W_f}
+\]
+
+\[
+y=(v+0.5)\frac{H_{pad}}{H_f}
+\]
+
+随后计算到所有 GT point 的最近距离。为控制显存，最近距离计算使用 chunked `cdist`。
+
+### 3.3 Full-map FIDT
+
+所有 valid FIDT cells 参与 MSE：
+
+\[
+L_{\mathrm{FIDT}}=
+\frac{\sum_{q\in valid}(\hat T(q)-T(q))^2}{N_{valid}}
+\]
+
+padding 区域不参与 loss。空 GT 图片 target 为全 0。
+
+总训练目标：
+
+\[
+L=L_{\mathrm{Point-DINO}}+\lambda_{\mathrm{FIDT}}L_{\mathrm{FIDT}}
+\]
+
+### 3.4 FIDT 梯度路径检查
+
+对 FIDT-only loss 做独立 backward 后：
+
+```text
+FIDT head               gradient > 0
+Backbone                gradient > 0
+Neck                    gradient > 0
+Transformer encoder     gradient = 0
+Transformer decoder     gradient = 0
+Point prediction head   gradient = 0
+```
+
+因此 FIDT branch 只能通过共享 backbone / neck 间接影响最终 query-based point prediction。FIDT head 在 inference 阶段不参与最终输出。
+
+### 3.5 Local FIDT
+
+Local mask：
+
+\[
+M(q)=M_{valid}(q)\land[D(q)\le R]
+\]
+
+Local FIDT loss：
+
+\[
+L_{\mathrm{local}}=
+\frac{\sum_q M(q)(\hat T(q)-T(q))^2}{\max(\sum_q M(q),1)}
+\]
+
+实现特性：
+
+- 仅 `D(q) <= R` 的 valid cells 参与 loss；
+- radius 外直接 ignore，而不是设为 0 后继续平均；
+- 多 GT 使用最近距离形成局部区域 union；
+- overlap 区域只计算一次；
+- empty-GT image 在 Local 模式下不产生 selected cells；
+- 整个 batch 没有 selected cells 时返回 graph-connected zero；
+- `local_radius_px=None` 时严格保留 Full-map 行为；
+- Full / Local 共用最近距离计算，不重复 `cdist`。
+
+Stage 4 Local-FIDT 正式实验使用：
+
+```text
+R = 16 px
+```
+
+---
+
+# 4. ShanghaiTech Part B 实验
+
+## 4.1 固定协议
+
+```text
+Dataset                    ShanghaiTech Part B
+Input                      native 1024×768
+Epochs                     12
+num_classes                1
+num_queries                900
+Euclidean point weight     0.20
+Point L1 loss weight       5
+FocalLossCost              2
+PointL1Cost                20
+Point DN noise             0.01
+score threshold            0.5
+Metric                     F1@4 / F1@8
+Checkpoint selection       best F1@8
+Initialization             common Stage 2 Point-DINO init
+```
+
+所有 Stage 4 正式 sweep 都从同一个 Stage 2 init 开始：
+
+```text
+/root/autodl-tmp/dinov3_dino_mmdet/checkpoints/mmdet/point_dino_stage2_step2_init.pth
+```
+
+没有从已训练 Stage 3 checkpoint 再续训。
+
+## 4.2 Full-map FIDT λ Sweep
+
+主要配置：
+
+```text
+configs/dino/point_dino_r50_shanghaitech_stage4_fidt_native_12e.py
+```
+
+扫描：
+
+\[
+\lambda_{\mathrm{FIDT}}\in\{0,0.25,0.5,1,2\}
+\]
+
+| λFIDT | F1@4 | F1@8 | MLE@4 | MLE@8 |
+|---:|---:|---:|---:|---:|
+| 0 | 62.04 | 83.60 | 2.1764 | 3.0422 |
+| 0.25 | 61.75 | 83.50 | — | — |
+| 0.5 | **62.09** | **83.67** | — | — |
+| 1 | 61.82 | 83.60 | — | — |
+| 2 | 61.99 | 83.58 | — | — |
+
+相对 λ=0：
+
+```text
+best F1@4: 62.04 → 62.09  (+0.05 pp)
+best F1@8: 83.60 → 83.67  (+0.07 pp)
+```
+
+**结论：Full-map FIDT 没有带来有意义的提升。**
+
+### 4.2.1 Full-map FIDT loss 训练现象
+
+观察到 raw FIDT MSE 大致：
+
+```text
+训练开始        ≈ 0.06
+epoch 1 后      ≈ 0.004
+训练后期        ≈ 0.0007 ~ 0.0008
+```
+
+说明 FIDT map supervision 很快被优化到较小值，后期其加权 contribution 很小；这只是实验现象，不证明背景占比是唯一原因。
+
+## 4.3 Local-FIDT Sweep
+
+主要配置：
+
+```text
+configs/dino/point_dino_r50_shanghaitech_stage4_local_fidt_native_12e.py
+```
+
+固定：
+
+```text
+R = 16 px
+```
+
+扫描：
+
+\[
+\lambda_{\mathrm{FIDT}}\in\{0,0.5,1,2,4\}
+\]
+
+| λFIDT | F1@4 | F1@8 |
+|---:|---:|---:|
+| 0 | 61.96 | 83.60 |
+| 0.5 | 61.74 | 83.50 |
+| 1 | **62.01** | 83.31 |
+| 2 | 61.94 | **83.62** |
+| 4 | 61.90 | 83.60 |
+
+相对 λ=0：
+
+```text
+best F1@4: 61.96 → 62.01  (+0.05 pp)
+best F1@8: 83.60 → 83.62  (+0.02 pp)
+```
+
+**结论：Local FIDT `R=16` 同样没有带来有意义的提升。**
+
+需要注意：Local-FIDT sweep 中 λ=0 retrain 为 `61.96 / 83.60`，历史 Stage 3 某次结果为 `62.28 / 83.99`。两者不是同一次训练，且 sweep 使用 `deterministic=False`，因此不能用它们直接估计 FIDT 增益；FIDT 消融应比较同一 sweep 内的 λ=0 control。
+
+---
+
+# 5. BCData 实验
+
+## 5.1 数据审计
+
+数据路径：
+
+```text
+/root/autodl-tmp/dinov3_dino_mmdet/data/BCData/
+```
+
+| Split | Images | Positive | Negative | Total points | Max GT/image |
+|---|---:|---:|---:|---:|---:|
+| Train | 803 | 33,058 | 60,780 | 93,838 | 374 |
+| Validation | 133 | 7,701 | 14,103 | 21,804 | 374 |
+| Test | 402 | 21,864 | 43,568 | 65,432 | **421** |
+| **Total** | **1,338** | **62,623** | **118,451** | **181,074** | **421** |
+
+全部图片均为：
+
+```text
+640×640
+```
+
+数据检查：
+
+```text
+missing positive h5 = 0
+missing negative h5 = 0
+non-640x640 images = 0
+invalid/out-of-bound coordinates = 0
+```
+
+最大单图 GT = 421，小于 `num_queries=900`，因此当前 query capacity 足够。
+
+## 5.2 Task Definition
+
+第一阶段只评价 localization：
+
+```text
+positive + negative
+        ↓
+single class: cell
+```
+
+即：
+
+```text
+num_classes = 1
+```
+
+暂不评价 Ki-67 positive / negative 分类。
+
+## 5.3 输入尺度和评价协议
+
+BCData 原图：
+
+```text
+640×640
+```
+
+为了与已有 localization baseline 对齐，模型输入统一：
+
+```text
+512×512
+```
+
+训练 / validation / test pipeline：
+
+```text
+640×640
+    ↓ Resize
+512×512
+```
+
+BCData inference 使用：
+
+```text
+rescale_points = False
+```
+
+从而保证：
+
+```text
+GT coordinates   = 512-space
+Pred coordinates = 512-space
+```
+
+最终 metric：
+
+```text
+F1@5px
+F1@10px
+```
+
+## 5.4 PointMetric key 修复
+
+原实现：
+
+```python
+key = str(int(threshold))
+```
+
+会把：
+
+```text
+6.25 → 6
+12.5 → 12
+```
+
+虽然实际 matching 仍然使用 float threshold，但 metric key 会错误截断。
+
+修改为：
+
+```python
+key = f'{threshold:g}'
+```
+
+该修改只修复日志 / checkpoint key，不改变距离计算。
+
+## 5.5 Point-DINO inference 坐标系改动
+
+文件：
+
+```text
+mmdet/models/dense_heads/dino_head.py
+```
+
+`_predict_by_feat_single()` 先把 normalized `(x,y)` 乘当前 `img_shape` 得到 resize-space pixel coordinates。为了 BCData 直接在 512-space 评价，引入：
+
+```text
+rescale_points=False
+```
+
+使预测点不再除以 `scale_factor` 映射回 640-space。
+
+最终：
+
+```text
+model input       = 512×512
+GT coordinates    = 512×512
+Pred coordinates  = 512×512
+Metric            = 5 / 10 px
+```
+
+## 5.6 BCData 固定训练设置
+
+```text
+Input                      = 512×512
+Epochs                     = 12
+num_classes                = 1
+num_queries                = 900
+max_per_img                = 900
+Euclidean point weight     = 0.20
+Point L1 loss weight       = 5
+FocalLossCost              = 2
+PointL1Cost                = 20
+Point DN noise             = 0.01
+Local FIDT radius          = 16 px
+Metric                     = F1@5 / F1@10
+Checkpoint selection       = validation F1@10
+Initialization             = common Stage 2 Point-DINO init
+```
+
+---
+
+# 6. BCData Confidence Threshold Sweep
+
+初始沿用：
+
+```text
+score_threshold = 0.5
+```
+
+但模型呈现明显 high precision / low recall，因此固定 checkpoint 后，只在 validation set 上扫 confidence threshold：
+
+\[
+score=0.05,0.075,0.10,\ldots,0.90
+\]
+
+步长：
+
+```text
+0.025
+```
+
+正式选择规则：
+
+> 使用 validation F1@10 最大的 confidence threshold；test set 不参与 confidence tuning。
+
+## 6.1 λFIDT = 2：Validation Sweep
+
+`score=0.5` sanity check：
+
+```text
+Predictions = 17,518
+F1@5  = 75.88
+F1@10 = 84.12
+```
+
+最佳 confidence：
+
+```text
+0.325
+```
+
+| Metric | Result |
+|---|---:|
+| Predictions | 21,679 |
+| P@5 | 79.39 |
+| R@5 | 78.94 |
+| **F1@5** | **79.16** |
+| P@10 | 88.07 |
+| R@10 | 87.57 |
+| **F1@10** | **87.82** |
+
+F1@5 和 F1@10 的最佳 confidence 恰好都是 `0.325`。
+
+## 6.2 λFIDT = 2：正式 Test
+
+固定：
+
+```text
+checkpoint = validation-best
+score = 0.325
+```
+
+Test set：
+
+```text
+402 images
+65,432 GT points
+```
+
+| Metric | 5 px | 10 px |
+|---|---:|---:|
+| Precision | 82.31 | 89.93 |
+| Recall | 79.46 | 86.82 |
+| **F1** | **80.86** | **88.35** |
+| MLE | 2.1271 px | 2.4978 px |
+| TP | 51,995 | 56,808 |
+| FP | 11,173 | 6,360 |
+| FN | 13,437 | 8,624 |
+
+GT consistency：
+
+```text
+51,995 + 13,437 = 65,432
+56,808 + 8,624  = 65,432
+```
+
+与完整 test GT 数一致。
+
+---
+
+# 7. BCData FIDT Ablation：λFIDT = 0
+
+为判断 BCData 上的性能是否来自 FIDT branch，进行了严格 control：
+
+```text
+Stage 4 code path 保持不变
+FIDT head 保持存在
+R = 16 不变
+仅设置 fidt_loss_weight = 0
+```
+
+因此该实验准确名称应为：
+
+```text
+Point-DINO w/o FIDT
+```
+
+而不是代码意义上完全删除 Stage 4。
+
+## 7.1 λFIDT = 0：Validation Sweep
+
+`score=0.5`：
+
+```text
+Predictions = 17,309
+F1@5  = 75.37
+F1@10 = 83.65
+```
+
+最佳 confidence：
+
+```text
+0.325
+```
+
+| Metric | Result |
+|---|---:|
+| Predictions | 21,479 |
+| P@5 | 79.57 |
+| R@5 | 78.38 |
+| **F1@5** | **78.97** |
+| P@10 | 88.39 |
+| R@10 | 87.08 |
+| **F1@10** | **87.73** |
+
+## 7.2 λFIDT = 0：正式 Test
+
+固定：
+
+```text
+score = 0.325
+```
+
+| Metric | 5 px | 10 px |
+|---|---:|---:|
+| Precision | 82.55 | 90.18 |
+| Recall | 79.23 | 86.56 |
+| **F1** | **80.85** | **88.33** |
+| MLE | 2.1348 px | 2.5056 px |
+| TP | 51,840 | 56,635 |
+| FP | 10,960 | 6,165 |
+| FN | 13,592 | 8,797 |
+
+---
+
+# 8. BCData FIDT Ablation 汇总
+
+| Variant | λFIDT | Val-selected score | F1@5 | F1@10 | MLE@5 | MLE@10 |
+|---|---:|---:|---:|---:|---:|---:|
+| Point-DINO w/o FIDT | 0 | 0.325 | 80.85 | 88.33 | 2.1348 | 2.5056 |
+| Point-DINO + Local FIDT | 2 | 0.325 | 80.86 | 88.35 | 2.1271 | 2.4978 |
+| **Δ (λ2 - λ0)** | — | — | **+0.01 pp** | **+0.02 pp** | **-0.0077 px** | **-0.0078 px** |
+
+Precision / Recall 变化：
+
+```text
+5 px:
+P 82.55 → 82.31  (-0.24 pp)
+R 79.23 → 79.46  (+0.23 pp)
+
+10 px:
+P 90.18 → 89.93  (-0.25 pp)
+R 86.56 → 86.82  (+0.26 pp)
+```
+
+说明 FIDT 只产生极小的 precision / recall balance 变化，最终 F1 几乎不变。
+
+---
+
+# 9. BCData 与已有 Localization Baselines 对比
+
+在对齐的：
+
+```text
+Input  = 512×512
+Metric = F1@5 / F1@10
+```
+
+协议下，本项目记录的参考结果如下：
+
+| Method | P@5 | R@5 | F1@5 | P@10 | R@10 | F1@10 |
+|---|---:|---:|---:|---:|---:|---:|
+| U-CSRNet | 76.9 | 77.5 | 77.2 | 86.6 | 87.2 | 86.9 |
+| VGG+FPN | 76.9 | 78.9 | 77.9 | 86.1 | 88.3 | 87.1 |
+| U-Net | 81.7 | 72.1 | 76.7 | 80.7 | 91.4 | 85.7 |
+| HRNet | 80.1 | 78.3 | 79.2 | 88.4 | 86.3 | 87.3 |
+| M-HRNet | 80.2 | 78.3 | 79.3 | 88.4 | 86.2 | 87.2 |
+| **Point-DINO w/o FIDT** | **82.55** | **79.23** | **80.85** | **90.18** | **86.56** | **88.33** |
+| **Point-DINO + Local FIDT** | 82.31 | **79.46** | **80.86** | 89.93 | **86.82** | **88.35** |
+
+相对表中已有最好 F1：
+
+```text
+F1@5:
+79.3 → 80.85 / 80.86
+≈ +1.55 ~ +1.56 pp
+
+F1@10:
+87.3 → 88.33 / 88.35
+≈ +1.03 ~ +1.05 pp
+```
+
+最重要的是：
+
+```text
+Point-DINO w/o FIDT:
+F1@5  = 80.85
+F1@10 = 88.33
+```
+
+因此 BCData 上的强 localization 表现并不依赖 FIDT auxiliary supervision。
+
+---
+
+# 10. Stage 4 所有实验汇总
+
+## 10.1 ShanghaiTech Part B — Full FIDT
+
+| λFIDT | F1@4 | F1@8 |
+|---:|---:|---:|
+| 0 | 62.04 | 83.60 |
+| 0.25 | 61.75 | 83.50 |
+| 0.5 | **62.09** | **83.67** |
+| 1 | 61.82 | 83.60 |
+| 2 | 61.99 | 83.58 |
+
+## 10.2 ShanghaiTech Part B — Local FIDT, R=16
+
+| λFIDT | F1@4 | F1@8 |
+|---:|---:|---:|
+| 0 | 61.96 | 83.60 |
+| 0.5 | 61.74 | 83.50 |
+| 1 | **62.01** | 83.31 |
+| 2 | 61.94 | **83.62** |
+| 4 | 61.90 | 83.60 |
+
+## 10.3 BCData — Validation confidence sweep
+
+| Variant | Score@0.5 F1@5 | Score@0.5 F1@10 | Best score | Best Val F1@5 | Best Val F1@10 |
+|---|---:|---:|---:|---:|---:|
+| λFIDT=0 | 75.37 | 83.65 | **0.325** | **78.97** | **87.73** |
+| λFIDT=2 | 75.88 | 84.12 | **0.325** | **79.16** | **87.82** |
+
+## 10.4 BCData — Test
+
+| Variant | P@5 | R@5 | F1@5 | P@10 | R@10 | F1@10 |
+|---|---:|---:|---:|---:|---:|---:|
+| λFIDT=0 | 82.55 | 79.23 | **80.85** | 90.18 | 86.56 | **88.33** |
+| λFIDT=2 | 82.31 | 79.46 | **80.86** | 89.93 | 86.82 | **88.35** |
+
+---
+
+# 11. Stage 4 最终结论
+
+Stage 4 的核心研究问题是：
+
+> 额外增加一个 FIDT dense spatial auxiliary branch，能否提升 Point-DINO 最终 query-based point localization？
+
+现有实验给出高度一致的结果。
+
+ShanghaiTech Part B：
+
+```text
+Full FIDT:
+最大提升仅约 +0.05 / +0.07 pp
+
+Local FIDT:
+最大提升仅约 +0.05 / +0.02 pp
+```
+
+BCData：
+
+```text
+λFIDT=0:
+F1@5  = 80.85
+F1@10 = 88.33
+
+λFIDT=2:
+F1@5  = 80.86
+F1@10 = 88.35
+```
+
+FIDT 增益只有：
+
+```text
++0.01 pp @5
++0.02 pp @10
+```
+
+因此当前证据支持：
+
+> **Stage 4 的 branch-style FIDT auxiliary supervision 对 Point-DINO 最终 query point prediction 没有带来有意义的性能提升。**
+
+该结论已经在 ShanghaiTech Part B 和 BCData 两个性质差异明显的数据集上得到一致观察。
+
+---
+
+# 12. Stage 4 的重要正向结果
+
+虽然 FIDT auxiliary branch 无效，但 BCData 实验验证了：
+
+> **Point-DINO 的直接 query → `(x,y)` formulation 本身具有较强的 pixel-level point localization 能力。**
+
+无 FIDT 的 Point-DINO：
+
+```text
+F1@5   = 80.85
+F1@10  = 88.33
+MLE@5  = 2.1348 px
+MLE@10 = 2.5056 px
+```
+
+因此 ShanghaiTech Part B 上较低的 strict F1 不能简单归因于 direct query point regression 本身缺乏精确定位能力。
+
+---
+
+# 13. Stage 4 后续建议
+
+Stage 4 到此应停止继续进行：
+
+```text
+FIDT λ sweep
+FIDT radius sweep
+Full / Local FIDT variants
+```
+
+因为在两个数据集上的收益都已接近 0。
+
+如果后续继续提高 Point-DINO localization，更值得研究的是让 spatial localization supervision **直接进入 query 的最终定位机制**，而不是继续增加一个 inference 时被丢弃的 backbone auxiliary map head。
+
+例如后续可以研究：
+
+```text
+query
+  ↓
+query-conditioned spatial localization distribution
+  ↓
+soft-argmax / integral coordinate
+  ↓
+(x, y)
+```
+
+同时继续保留：
+
+```text
+DINO query set prediction
+Hungarian matching
+direct point-set output
+```
+
+这属于 Stage 5 / 后续阶段，不属于 Stage 4。
+
+---
+
+# 14. Stage 4 关键文件
+
+核心实现：
+
+```text
+mmdet/models/dense_heads/point_fidt_aux_head.py
+mmdet/models/dense_heads/dino_head.py
+mmdet/evaluation/metrics/point_metric.py
+```
+
+ShanghaiTech Stage 4 配置：
+
+```text
+configs/dino/point_dino_r50_shanghaitech_stage4_fidt_native_12e.py
+configs/dino/point_dino_r50_shanghaitech_stage4_local_fidt_native_12e.py
+```
+
+BCData Stage 4 配置：
+
+```text
+configs/dino/point_dino_r50_bcdata_stage4_local_fidt_512_12e.py
+configs/dino/point_dino_r50_bcdata_stage4_local_fidt_lam0_512_12e.py
+```
+
+BCData confidence sweep：
+
+```text
+sweep_bcdata_confidence.py
+```
+
+BCData visualization：
+
+```text
+visualize_bcdata_lam0_test.py
+```
+
+BCData：
+
+```text
+/root/autodl-tmp/dinov3_dino_mmdet/data/BCData/
+```
+
+Stage 2 common initialization：
+
+```text
+/root/autodl-tmp/dinov3_dino_mmdet/checkpoints/mmdet/point_dino_stage2_step2_init.pth
+```
+
+---
+
+# 15. 一句话总结
+
+> **Stage 4 证明了 FIDT-based dense auxiliary supervision 对 Point-DINO 基本无效，但同时验证了不依赖 FIDT 的直接 query-to-point Point-DINO 在 BCData 上具有很强的严格点定位能力。**

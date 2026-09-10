@@ -11,7 +11,7 @@ from .deformable_detr_layers import (DeformableDetrTransformerDecoder,
                                      DeformableDetrTransformerEncoderLayer)
 from .detr_layers import (DetrTransformerDecoder, DetrTransformerDecoderLayer,
                           DetrTransformerEncoder, DetrTransformerEncoderLayer)
-from .dino_layers import CdnQueryGenerator, DinoTransformerDecoder
+from .dino_layers import (CdnQueryGenerator, DinoTransformerDecoder, PointCdnQueryGenerator)
 from .grounding_dino_layers import (GroundingDinoTransformerDecoder,
                                     GroundingDinoTransformerDecoderLayer,
                                     GroundingDinoTransformerEncoder)
@@ -33,7 +33,7 @@ __all__ = [
     'ConditionalAttention', 'DABDetrTransformerDecoderLayer',
     'DABDetrTransformerDecoder', 'DABDetrTransformerEncoder',
     'DDQTransformerDecoder', 'ConditionalDetrTransformerDecoder',
-    'ConditionalDetrTransformerDecoderLayer', 'DinoTransformerDecoder',
+    'ConditionalDetrTransformerDecoderLayer', 'DinoTransformerDecoder','PointCdnQueryGenerator',
     'CdnQueryGenerator', 'Mask2FormerTransformerEncoder',
     'Mask2FormerTransformerDecoderLayer', 'Mask2FormerTransformerDecoder',
     'GroundingDinoTransformerDecoderLayer', 'GroundingDinoTransformerEncoder',

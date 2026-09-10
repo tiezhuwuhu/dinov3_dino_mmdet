@@ -6,6 +6,7 @@ model = dict(
     num_queries=900,  # num_matching_queries
     with_box_refine=True,
     as_two_stage=True,
+    use_dn=True,
     data_preprocessor=dict(
         type='DetDataPreprocessor',
         mean=[123.675, 116.28, 103.53],
@@ -59,7 +60,7 @@ model = dict(
         temperature=20),  # 10000 for DeformDETR
     bbox_head=dict(
         type='DINOHead',
-        num_classes=80,
+        num_classes=1,
         sync_cls_avg_factor=True,
         loss_cls=dict(
             type='FocalLoss',
@@ -71,7 +72,7 @@ model = dict(
         loss_iou=dict(type='GIoULoss', loss_weight=2.0)),
     dn_cfg=dict(  # TODO: Move to model.train_cfg ?
         label_noise_scale=0.5,
-        box_noise_scale=1.0,  # 0.4 for DN-DETR
+        point_noise_scale=0.05,  # 0.4 for DN-DETR
         group_cfg=dict(dynamic=True, num_groups=None,
                        num_dn_queries=100)),  # TODO: half num_dn_queries
     # training and testing settings
@@ -80,16 +81,15 @@ model = dict(
             type='HungarianAssigner',
             match_costs=[
                 dict(type='FocalLossCost', weight=2.0),
-                dict(type='BBoxL1Cost', weight=5.0, box_format='xywh'),
-                dict(type='IoUCost', iou_mode='giou', weight=2.0)
+                dict(type='PointL1Cost', weight=5.0)
             ])),
-    test_cfg=dict(max_per_img=300))  # 100 for DeformDETR
+    test_cfg=dict(max_per_img=900))  # 100 for DeformDETR
 
 # train_pipeline, NOTE the img_scale and the Pad's size_divisor is different
 # from the default setting in mmdet.
 train_pipeline = [
     dict(type='LoadImageFromFile', backend_args={{_base_.backend_args}}),
-    dict(type='LoadAnnotations', with_bbox=True),
+    dict(type='LoadAnnotations', with_bbox=False, with_label=False, with_point=True),
     dict(type='RandomFlip', prob=0.5),
     dict(
         type='RandomChoice',
@@ -123,10 +123,69 @@ train_pipeline = [
             ]
         ]),
     dict(type='PackDetInputs')
+    
 ]
+
+test_pipeline = [
+    dict(
+        type='LoadImageFromFile',
+        backend_args={{_base_.backend_args}}),
+    dict(
+        type='Resize',
+        scale=(1333, 800),
+        keep_ratio=True),
+    dict(
+        type='LoadAnnotations',
+        with_bbox=False,
+        with_label=False,
+        with_point=True),
+    dict(
+        type='PackDetInputs',
+        meta_keys=(
+            'img_id',
+            'img_path',
+            'ori_shape',
+            'img_shape',
+            'scale_factor'))
+]
+
+data_root = (
+    '/root/autodl-tmp/dinov3_dino_mmdet/data/'
+    'ShanghaiTech_Crowd_Counting_Dataset/part_B_final/'
+)
+
 train_dataloader = dict(
     dataset=dict(
-        filter_cfg=dict(filter_empty_gt=False), pipeline=train_pipeline))
+        _delete_=True,
+        type='BaseDetDataset',
+        data_root=data_root,
+        ann_file='train_point.json',
+        data_prefix=dict(
+            img_path='train_data/images/'),
+        pipeline=train_pipeline))
+        
+val_dataloader = dict(
+    dataset=dict(
+        _delete_=True,
+        type='BaseDetDataset',
+        data_root=data_root,
+        ann_file='test_point.json',
+        data_prefix=dict(
+            img_path='test_data/images/'),
+        pipeline=test_pipeline,
+        test_mode=True))
+
+test_dataloader = dict(
+    dataset=dict(
+        _delete_=True,
+        type='BaseDetDataset',
+        data_root=data_root,
+        ann_file='test_point.json',
+        data_prefix=dict(
+            img_path='test_data/images/'),
+        pipeline=test_pipeline,
+        test_mode=True))        
+
 
 # optimizer
 optim_wrapper = dict(
@@ -161,3 +220,15 @@ param_scheduler = [
 # USER SHOULD NOT CHANGE ITS VALUES.
 # base_batch_size = (8 GPUs) x (2 samples per GPU)
 auto_scale_lr = dict(base_batch_size=16)
+
+val_evaluator = dict(
+    _delete_=True,
+    type='PointMetric',
+    distance_thresholds=[4.0, 8.0],
+    score_threshold=0.5)
+
+test_evaluator = dict(
+    _delete_=True,
+    type='PointMetric',
+    distance_thresholds=[4.0, 8.0],
+    score_threshold=0.5)
