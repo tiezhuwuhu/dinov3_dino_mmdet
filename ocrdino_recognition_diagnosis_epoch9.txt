@@ -1,0 +1,776 @@
+/root/miniconda3/lib/python3.12/site-packages/mmengine/runner/checkpoint.py:347: UserWarning: Environment variable TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD detected, since the`weights_only` argument was not explicitly passed to `torch.load`, forcing weights_only=False.
+  checkpoint = torch.load(filename, map_location=map_location)
+/root/miniconda3/lib/python3.12/site-packages/torch/functional.py:554: UserWarning: torch.meshgrid: in an upcoming release, it will be required to pass the indexing argument. (Triggered internally at /pytorch/aten/src/ATen/native/TensorShape.cpp:4322.)
+  return _VF.meshgrid(tensors, **kwargs)  # type: ignore[attr-defined]
+
+============================================
+OCRDINO RECOGNITION DIAGNOSTIC
+============================================
+config: configs/ocrdino/ocrdino_r50_totaltext_original_24e.py
+checkpoint: /root/autodl-tmp/work_dirs/ocrdino_r50_totaltext_original_24e_val/epoch_9.pth
+device: cuda:0
+score threshold: 0.3
+iou threshold: 0.5
+Loads checkpoint by local backend from path: /root/autodl-tmp/work_dirs/ocrdino_r50_totaltext_original_24e_val/epoch_9.pth
+
+dataset length: 1255
+
+--------------------------------------------
+MATCH 1
+image index: 0
+img path: /root/autodl-tmp/dataset/totaltext/train_images/0000000.jpg
+det score: 0.768324
+iou: 0.697308
+GT text: 'Alpaca'
+PRED text: 'AAAEE'
+GT tokens:
+33 76 80 65 67 65 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED tokens:
+33 33 33 37 37 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED symbols:
+A A A E E EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS
+TOP1 probs:
+0.070 0.101 0.077 0.063 0.073 0.424 0.910 0.991 0.998 0.999 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000
+pred EOS count: 20 / 25
+real char token correct: 1 / 6
+EOS token correct: 19 / 19
+
+--------------------------------------------
+MATCH 2
+image index: 0
+img path: /root/autodl-tmp/dataset/totaltext/train_images/0000000.jpg
+det score: 0.759586
+iou: 0.873404
+GT text: 'the'
+PRED text: 'AOE'
+GT tokens:
+84 72 69 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED tokens:
+33 47 37 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED symbols:
+A O E EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS
+TOP1 probs:
+0.088 0.134 0.090 0.392 0.930 0.992 0.998 0.999 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000
+pred EOS count: 22 / 25
+real char token correct: 0 / 3
+EOS token correct: 22 / 22
+
+--------------------------------------------
+MATCH 3
+image index: 0
+img path: /root/autodl-tmp/dataset/totaltext/train_images/0000000.jpg
+det score: 0.662124
+iou: 0.866666
+GT text: 'OPEN'
+PRED text: 'AAAEE'
+GT tokens:
+47 48 37 46 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED tokens:
+33 33 33 37 37 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED symbols:
+A A A E E EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS
+TOP1 probs:
+0.095 0.154 0.126 0.128 0.142 0.746 0.952 0.996 0.999 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000
+pred EOS count: 20 / 25
+real char token correct: 0 / 4
+EOS token correct: 20 / 21
+
+--------------------------------------------
+MATCH 4
+image index: 0
+img path: /root/autodl-tmp/dataset/totaltext/train_images/0000000.jpg
+det score: 0.657733
+iou: 0.864111
+GT text: 'shop'
+PRED text: 'COOE'
+GT tokens:
+83 72 79 80 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED tokens:
+35 47 47 37 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED symbols:
+C O O E EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS
+TOP1 probs:
+0.086 0.191 0.133 0.076 0.538 0.974 0.997 0.999 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000
+pred EOS count: 21 / 25
+real char token correct: 0 / 4
+EOS token correct: 21 / 21
+
+--------------------------------------------
+MATCH 5
+image index: 0
+img path: /root/autodl-tmp/dataset/totaltext/train_images/0000000.jpg
+det score: 0.641048
+iou: 0.679529
+GT text: 'including'
+PRED text: 'Siiiinn'
+GT tokens:
+73 78 67 76 85 68 73 78 71 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED tokens:
+51 73 73 73 73 78 78 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED symbols:
+S i i i i n n EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS
+TOP1 probs:
+0.059 0.052 0.063 0.064 0.059 0.062 0.067 0.073 0.187 0.435 0.729 0.885 0.951 0.979 0.991 0.995 0.996 0.997 0.998 0.998 0.998 0.999 0.999 0.999 0.999
+pred EOS count: 18 / 25
+real char token correct: 0 / 9
+EOS token correct: 16 / 16
+
+--------------------------------------------
+MATCH 6
+image index: 0
+img path: /root/autodl-tmp/dataset/totaltext/train_images/0000000.jpg
+det score: 0.500871
+iou: 0.716029
+GT text: 'clothing'
+PRED text: 'Caeee'
+GT tokens:
+67 76 79 84 72 73 78 71 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED tokens:
+35 65 69 69 69 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED symbols:
+C a e e e EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS
+TOP1 probs:
+0.044 0.058 0.070 0.079 0.086 0.142 0.457 0.828 0.956 0.987 0.995 0.998 0.999 0.999 0.999 0.999 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000
+pred EOS count: 20 / 25
+real char token correct: 0 / 8
+EOS token correct: 17 / 17
+
+--------------------------------------------
+MATCH 7
+image index: 0
+img path: /root/autodl-tmp/dataset/totaltext/train_images/0000000.jpg
+det score: 0.494146
+iou: 0.792415
+GT text: 'hats'
+PRED text: '11'
+GT tokens:
+72 65 84 83 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED tokens:
+17 17 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED symbols:
+1 1 EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS
+TOP1 probs:
+0.138 0.098 0.118 0.710 0.958 0.992 0.998 0.999 0.999 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000
+pred EOS count: 23 / 25
+real char token correct: 0 / 4
+EOS token correct: 21 / 21
+
+--------------------------------------------
+MATCH 8
+image index: 0
+img path: /root/autodl-tmp/dataset/totaltext/train_images/0000000.jpg
+det score: 0.467867
+iou: 0.783396
+GT text: 'alpaca'
+PRED text: 'SAOOE'
+GT tokens:
+65 76 80 65 67 65 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED tokens:
+51 33 47 47 37 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED symbols:
+S A O O E EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS
+TOP1 probs:
+0.111 0.128 0.120 0.095 0.082 0.476 0.955 0.997 0.999 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000
+pred EOS count: 20 / 25
+real char token correct: 0 / 6
+EOS token correct: 19 / 19
+
+--------------------------------------------
+MATCH 9
+image index: 1
+img path: /root/autodl-tmp/dataset/totaltext/train_images/0000001.jpg
+det score: 0.661349
+iou: 0.827750
+GT text: 'MOBILE'
+PRED text: 'SOOE'
+GT tokens:
+45 47 34 41 44 37 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED tokens:
+51 47 47 37 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED symbols:
+S O O E EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS
+TOP1 probs:
+0.100 0.109 0.082 0.058 0.129 0.450 0.758 0.891 0.959 0.983 0.992 0.996 0.997 0.998 0.999 0.999 0.999 0.999 1.000 1.000 1.000 1.000 1.000 1.000 1.000
+pred EOS count: 21 / 25
+real char token correct: 1 / 6
+EOS token correct: 19 / 19
+
+--------------------------------------------
+MATCH 10
+image index: 1
+img path: /root/autodl-tmp/dataset/totaltext/train_images/0000001.jpg
+det score: 0.575281
+iou: 0.797462
+GT text: 'PhFax'
+PRED text: 'COOE'
+GT tokens:
+48 72 38 65 88 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED tokens:
+35 47 47 37 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED symbols:
+C O O E EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS
+TOP1 probs:
+0.086 0.105 0.088 0.090 0.107 0.378 0.695 0.858 0.939 0.974 0.989 0.995 0.996 0.998 0.999 0.999 0.999 0.999 1.000 1.000 1.000 1.000 1.000 1.000 1.000
+pred EOS count: 21 / 25
+real char token correct: 0 / 5
+EOS token correct: 20 / 20
+
+--------------------------------------------
+MATCH 11
+image index: 1
+img path: /root/autodl-tmp/dataset/totaltext/train_images/0000001.jpg
+det score: 0.548992
+iou: 0.858624
+GT text: 'FOLLET'
+PRED text: 'SOEE'
+GT tokens:
+38 47 44 44 37 52 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED tokens:
+51 47 37 37 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED symbols:
+S O E E EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS
+TOP1 probs:
+0.087 0.101 0.075 0.086 0.167 0.465 0.739 0.882 0.955 0.981 0.991 0.994 0.996 0.997 0.998 0.999 0.999 0.999 0.999 0.999 1.000 1.000 1.000 1.000 1.000
+pred EOS count: 21 / 25
+real char token correct: 1 / 6
+EOS token correct: 19 / 19
+
+--------------------------------------------
+MATCH 12
+image index: 1
+img path: /root/autodl-tmp/dataset/totaltext/train_images/0000001.jpg
+det score: 0.547426
+iou: 0.744450
+GT text: 'SCHOLZ'
+PRED text: 'CAALE'
+GT tokens:
+51 35 40 47 44 58 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED tokens:
+35 33 33 44 37 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED symbols:
+C A A L E EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS
+TOP1 probs:
+0.080 0.107 0.097 0.084 0.087 0.129 0.277 0.530 0.785 0.898 0.960 0.980 0.987 0.991 0.995 0.996 0.998 0.999 0.999 0.999 0.999 0.999 0.999 0.999 0.999
+pred EOS count: 20 / 25
+real char token correct: 0 / 6
+EOS token correct: 19 / 19
+
+--------------------------------------------
+MATCH 13
+image index: 1
+img path: /root/autodl-tmp/dataset/totaltext/train_images/0000001.jpg
+det score: 0.501526
+iou: 0.544011
+GT text: '0883983606'
+PRED text: 'SOOONS'
+GT tokens:
+16 24 24 19 25 24 19 22 16 22 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED tokens:
+51 47 47 47 46 51 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED symbols:
+S O O O N S EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS
+TOP1 probs:
+0.113 0.107 0.110 0.088 0.074 0.079 0.233 0.497 0.813 0.938 0.974 0.988 0.992 0.995 0.997 0.998 0.999 0.999 0.999 0.999 0.999 1.000 1.000 1.000 1.000
+pred EOS count: 19 / 25
+real char token correct: 0 / 10
+EOS token correct: 15 / 15
+
+--------------------------------------------
+MATCH 14
+image index: 1
+img path: /root/autodl-tmp/dataset/totaltext/train_images/0000001.jpg
+det score: 0.496320
+iou: 0.764981
+GT text: '0412'
+PRED text: 'OO'
+GT tokens:
+16 20 17 18 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED tokens:
+47 47 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED symbols:
+O O EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS
+TOP1 probs:
+0.057 0.062 0.055 0.270 0.635 0.844 0.921 0.955 0.977 0.987 0.992 0.995 0.996 0.997 0.997 0.998 0.998 0.999 0.999 0.999 0.999 0.999 0.999 0.999 0.999
+pred EOS count: 23 / 25
+real char token correct: 0 / 4
+EOS token correct: 21 / 21
+
+--------------------------------------------
+MATCH 15
+image index: 1
+img path: /root/autodl-tmp/dataset/totaltext/train_images/0000001.jpg
+det score: 0.489803
+iou: 0.883202
+GT text: '869'
+PRED text: '1A'
+GT tokens:
+24 22 25 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED tokens:
+17 33 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED symbols:
+1 A EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS
+TOP1 probs:
+0.067 0.065 0.116 0.386 0.688 0.852 0.919 0.950 0.971 0.982 0.988 0.992 0.994 0.995 0.996 0.997 0.998 0.998 0.998 0.998 0.999 0.999 0.999 0.999 0.999
+pred EOS count: 23 / 25
+real char token correct: 0 / 3
+EOS token correct: 22 / 22
+
+--------------------------------------------
+MATCH 16
+image index: 1
+img path: /root/autodl-tmp/dataset/totaltext/train_images/0000001.jpg
+det score: 0.427014
+iou: 0.597957
+GT text: 'CONSTRUCTIONS'
+PRED text: 'COOOOOOOO'
+GT tokens:
+35 47 46 51 52 50 53 35 52 41 47 46 51 96 96 96 96 96 96 96 96 96 96 96 96
+PRED tokens:
+35 47 47 47 47 47 47 47 47 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED symbols:
+C O O O O O O O O EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS
+TOP1 probs:
+0.121 0.082 0.087 0.082 0.075 0.069 0.063 0.060 0.056 0.136 0.250 0.374 0.471 0.596 0.759 0.849 0.917 0.956 0.962 0.967 0.979 0.989 0.992 0.994 0.994
+pred EOS count: 16 / 25
+real char token correct: 2 / 13
+EOS token correct: 12 / 12
+
+--------------------------------------------
+MATCH 17
+image index: 1
+img path: /root/autodl-tmp/dataset/totaltext/train_images/0000001.jpg
+det score: 0.364084
+iou: 0.691817
+GT text: '820'
+PRED text: 'AA'
+GT tokens:
+24 18 16 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED tokens:
+33 33 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED symbols:
+A A EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS
+TOP1 probs:
+0.060 0.059 0.146 0.418 0.694 0.848 0.912 0.944 0.966 0.979 0.986 0.990 0.992 0.994 0.995 0.996 0.997 0.998 0.998 0.998 0.998 0.999 0.999 0.999 0.999
+pred EOS count: 23 / 25
+real char token correct: 0 / 3
+EOS token correct: 22 / 22
+
+--------------------------------------------
+MATCH 18
+image index: 1
+img path: /root/autodl-tmp/dataset/totaltext/train_images/0000001.jpg
+det score: 0.333702
+iou: 0.691221
+GT text: '1506'
+PRED text: 'OO'
+GT tokens:
+17 21 16 22 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED tokens:
+47 47 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED symbols:
+O O EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS
+TOP1 probs:
+0.083 0.087 0.151 0.469 0.760 0.894 0.943 0.966 0.981 0.989 0.993 0.995 0.996 0.997 0.998 0.998 0.999 0.999 0.999 0.999 0.999 0.999 0.999 0.999 0.999
+pred EOS count: 23 / 25
+real char token correct: 0 / 4
+EOS token correct: 21 / 21
+
+--------------------------------------------
+MATCH 19
+image index: 1
+img path: /root/autodl-tmp/dataset/totaltext/train_images/0000001.jpg
+det score: 0.305676
+iou: 0.759278
+GT text: 'BARKER'
+PRED text: 'CAAE'
+GT tokens:
+34 33 50 43 37 50 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED tokens:
+35 33 33 37 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED symbols:
+C A A E EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS
+TOP1 probs:
+0.073 0.096 0.075 0.073 0.181 0.375 0.560 0.703 0.825 0.897 0.937 0.959 0.971 0.979 0.985 0.989 0.992 0.994 0.995 0.996 0.996 0.997 0.998 0.998 0.998
+pred EOS count: 21 / 25
+real char token correct: 1 / 6
+EOS token correct: 19 / 19
+
+--------------------------------------------
+MATCH 20
+image index: 2
+img path: /root/autodl-tmp/dataset/totaltext/train_images/0000002.jpg
+det score: 0.800606
+iou: 0.871646
+GT text: 'Peters'
+PRED text: 'Soeeee'
+GT tokens:
+48 69 84 69 82 83 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED tokens:
+51 79 69 69 69 69 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED symbols:
+S o e e e e EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS
+TOP1 probs:
+0.146 0.081 0.105 0.131 0.162 0.166 0.812 0.983 0.997 0.999 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000
+pred EOS count: 19 / 25
+real char token correct: 1 / 6
+EOS token correct: 19 / 19
+
+--------------------------------------------
+MATCH 21
+image index: 2
+img path: /root/autodl-tmp/dataset/totaltext/train_images/0000002.jpg
+det score: 0.540213
+iou: 0.574052
+GT text: 'SWAPnGO'
+PRED text: 'Seeeee'
+GT tokens:
+51 55 33 48 78 39 47 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED tokens:
+51 69 69 69 69 69 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED symbols:
+S e e e e e EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS
+TOP1 probs:
+0.075 0.077 0.103 0.113 0.117 0.112 0.220 0.450 0.710 0.854 0.923 0.959 0.982 0.991 0.994 0.996 0.997 0.998 0.998 0.998 0.999 0.999 0.999 0.999 0.999
+pred EOS count: 19 / 25
+real char token correct: 1 / 7
+EOS token correct: 18 / 18
+
+--------------------------------------------
+MATCH 22
+image index: 2
+img path: /root/autodl-tmp/dataset/totaltext/train_images/0000002.jpg
+det score: 0.364326
+iou: 0.634347
+GT text: 'SPECIALS'
+PRED text: 'BAIIIII'
+GT tokens:
+51 48 37 35 41 33 44 51 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED tokens:
+34 33 41 41 41 41 41 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED symbols:
+B A I I I I I EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS
+TOP1 probs:
+0.077 0.099 0.099 0.103 0.105 0.103 0.098 0.111 0.241 0.401 0.536 0.657 0.818 0.903 0.940 0.959 0.971 0.979 0.984 0.987 0.989 0.990 0.991 0.991 0.991
+pred EOS count: 18 / 25
+real char token correct: 1 / 8
+EOS token correct: 17 / 17
+
+--------------------------------------------
+MATCH 23
+image index: 3
+img path: /root/autodl-tmp/dataset/totaltext/train_images/0000003.jpg
+det score: 0.819550
+iou: 0.940977
+GT text: 'COUNTRY'
+PRED text: 'SAAAAA'
+GT tokens:
+35 47 53 46 52 50 57 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED tokens:
+51 33 33 33 33 33 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED symbols:
+S A A A A A EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS
+TOP1 probs:
+0.178 0.118 0.099 0.090 0.085 0.076 0.084 0.597 0.967 0.997 0.999 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000
+pred EOS count: 19 / 25
+real char token correct: 0 / 7
+EOS token correct: 18 / 18
+
+--------------------------------------------
+MATCH 24
+image index: 3
+img path: /root/autodl-tmp/dataset/totaltext/train_images/0000003.jpg
+det score: 0.780769
+iou: 0.854435
+GT text: 'own'
+PRED text: 'SAEE'
+GT tokens:
+79 87 78 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED tokens:
+51 33 37 37 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED symbols:
+S A E E EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS
+TOP1 probs:
+0.124 0.165 0.110 0.130 0.572 0.964 0.995 0.999 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000
+pred EOS count: 21 / 25
+real char token correct: 0 / 3
+EOS token correct: 21 / 22
+
+--------------------------------------------
+MATCH 25
+image index: 3
+img path: /root/autodl-tmp/dataset/totaltext/train_images/0000003.jpg
+det score: 0.721449
+iou: 0.919763
+GT text: 'We'
+PRED text: '1O'
+GT tokens:
+55 69 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED tokens:
+17 47 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED symbols:
+1 O EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS
+TOP1 probs:
+0.092 0.078 0.674 0.959 0.993 0.998 0.999 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000
+pred EOS count: 23 / 25
+real char token correct: 0 / 2
+EOS token correct: 23 / 23
+
+--------------------------------------------
+MATCH 26
+image index: 3
+img path: /root/autodl-tmp/dataset/totaltext/train_images/0000003.jpg
+det score: 0.670472
+iou: 0.933183
+GT text: 'FRESH'
+PRED text: 'BAEE'
+GT tokens:
+38 50 37 51 40 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED tokens:
+34 33 37 37 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED symbols:
+B A E E EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS
+TOP1 probs:
+0.098 0.129 0.124 0.129 0.162 0.434 0.707 0.876 0.955 0.981 0.990 0.994 0.996 0.998 0.999 0.999 0.999 0.999 0.999 1.000 1.000 1.000 1.000 1.000 1.000
+pred EOS count: 21 / 25
+real char token correct: 1 / 5
+EOS token correct: 20 / 20
+
+--------------------------------------------
+MATCH 27
+image index: 3
+img path: /root/autodl-tmp/dataset/totaltext/train_images/0000003.jpg
+det score: 0.652085
+iou: 0.913749
+GT text: 'our'
+PRED text: 'SAE'
+GT tokens:
+79 85 82 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED tokens:
+51 33 37 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED symbols:
+S A E EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS
+TOP1 probs:
+0.110 0.114 0.074 0.199 0.825 0.982 0.996 0.999 0.999 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000
+pred EOS count: 22 / 25
+real char token correct: 0 / 3
+EOS token correct: 22 / 22
+
+--------------------------------------------
+MATCH 28
+image index: 3
+img path: /root/autodl-tmp/dataset/totaltext/train_images/0000003.jpg
+det score: 0.589655
+iou: 0.931486
+GT text: 'MAX'
+PRED text: 'BAE'
+GT tokens:
+45 33 56 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED tokens:
+34 33 37 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED symbols:
+B A E EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS
+TOP1 probs:
+0.102 0.143 0.102 0.509 0.889 0.978 0.994 0.998 0.999 0.999 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000
+pred EOS count: 22 / 25
+real char token correct: 1 / 3
+EOS token correct: 22 / 22
+
+--------------------------------------------
+MATCH 29
+image index: 3
+img path: /root/autodl-tmp/dataset/totaltext/train_images/0000003.jpg
+det score: 0.588016
+iou: 0.924121
+GT text: 'MEAT'
+PRED text: 'SAAE'
+GT tokens:
+45 37 33 52 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED tokens:
+51 33 33 37 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED symbols:
+S A A E EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS
+TOP1 probs:
+0.159 0.163 0.108 0.102 0.380 0.926 0.990 0.998 0.999 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000
+pred EOS count: 21 / 25
+real char token correct: 1 / 4
+EOS token correct: 21 / 21
+
+--------------------------------------------
+MATCH 30
+image index: 3
+img path: /root/autodl-tmp/dataset/totaltext/train_images/0000003.jpg
+det score: 0.470387
+iou: 0.867376
+GT text: 'SON'
+PRED text: 'SOE'
+GT tokens:
+51 47 46 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED tokens:
+51 47 37 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96 96
+PRED symbols:
+S O E EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS EOS
+TOP1 probs:
+0.124 0.173 0.094 0.672 0.965 0.994 0.998 0.999 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000
+pred EOS count: 22 / 25
+real char token correct: 2 / 3
+EOS token correct: 22 / 22
+
+processed images: 100 / 1255 matches: 767
+
+processed images: 200 / 1255 matches: 1361
+
+processed images: 300 / 1255 matches: 2091
+
+processed images: 400 / 1255 matches: 2663
+
+processed images: 500 / 1255 matches: 3238
+
+processed images: 600 / 1255 matches: 3825
+
+processed images: 700 / 1255 matches: 4297
+
+processed images: 800 / 1255 matches: 4760
+
+processed images: 900 / 1255 matches: 5281
+
+processed images: 1000 / 1255 matches: 5864
+
+processed images: 1100 / 1255 matches: 6578
+
+processed images: 1200 / 1255 matches: 7192
+
+
+============================================
+GLOBAL DIAGNOSTIC SUMMARY
+============================================
+images: 1255
+GT words: 9722
+matched predictions: 7531
+mean matched det score: 0.561950
+mean matched IoU: 0.853359
+exact word accuracy: 0.001062
+
+GT TARGET DISTRIBUTION
+GT total tokens: 243050
+GT character tokens: 52424
+GT EOS tokens: 190626
+GT EOS ratio: 0.784308
+
+MATCHED TOKEN ACCURACY
+all 25-position token accuracy: 0.802937
+real character token accuracy: 0.100198
+EOS-position accuracy: 0.997653
+predicted EOS ratio: 0.819780
+
+TOP GT TOKENS
+96 EOS 190626
+37 E 3847
+33 A 3778
+50 R 2634
+47 O 2572
+52 T 2559
+51 S 2557
+46 N 2491
+41 I 2483
+44 L 1803
+35 C 1617
+69 e 1490
+40 H 1316
+65 a 1249
+45 M 1226
+
+TOP PREDICTED TOKENS ON MATCHED BOXES
+96 EOS 154344
+33 A 7786
+37 E 4976
+47 O 3597
+41 I 3574
+51 S 2803
+50 R 2563
+69 e 2173
+46 N 1516
+35 C 1247
+17 1 711
+73 i 678
+79 o 417
+34 B 332
+52 T 327
+
+FIRST TOKEN DISTRIBUTION
+GT top first tokens:
+51 S 838
+35 C 757
+52 T 639
+34 B 634
+48 P 498
+45 M 476
+33 A 473
+40 H 389
+50 R 368
+38 F 355
+PRED top first tokens:
+51 S 2588
+33 A 1317
+35 C 1247
+17 1 615
+47 O 421
+34 B 332
+52 T 245
+50 R 223
+40 H 143
+55 W 98
+
+FIRST EOS POSITION
+position 0 means prediction starts with EOS
+position 25 means no EOS
+
+GT first EOS positions:
+1 318
+2 800
+3 1310
+4 1751
+5 1365
+6 1278
+7 1043
+8 750
+9 446
+10 301
+11 149
+12 73
+13 54
+14 18
+15 13
+16 8
+17 5
+18 6
+19 4
+20 6
+21 2
+22 4
+23 3
+24 1
+25 14
+
+PRED first EOS positions:
+1 289
+2 990
+3 1349
+4 1425
+5 1230
+6 1002
+7 629
+8 362
+9 158
+10 63
+11 23
+12 6
+14 2
+16 2
+17 1
+
+============================================
+GT EOS ratio: 0.784308
+PRED EOS ratio: 0.819780
+real character token accuracy: 0.100198
+EOS-position accuracy: 0.997653
+============================================

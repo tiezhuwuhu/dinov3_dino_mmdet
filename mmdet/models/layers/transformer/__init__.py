@@ -22,6 +22,10 @@ from .utils import (MLP, AdaptivePadding, ConditionalAttention, DynamicConv,
                     PatchEmbed, PatchMerging, coordinate_to_encoding,
                     inverse_sigmoid, nchw_to_nlc, nlc_to_nchw)
 
+from .text_spotting_layers import (
+    TaskAwareRecognitionQueryInitializer,
+)
+
 __all__ = [
     'nlc_to_nchw', 'nchw_to_nlc', 'AdaptivePadding', 'PatchEmbed',
     'PatchMerging', 'inverse_sigmoid', 'DynamicConv', 'MLP',
@@ -31,7 +35,7 @@ __all__ = [
     'DeformableDetrTransformerEncoderLayer',
     'DeformableDetrTransformerDecoderLayer', 'coordinate_to_encoding',
     'ConditionalAttention', 'DABDetrTransformerDecoderLayer',
-    'DABDetrTransformerDecoder', 'DABDetrTransformerEncoder',
+    'DABDetrTransformerDecoder', 'DABDetrTransformerEncoder','TaskAwareRecognitionQueryInitializer',
     'DDQTransformerDecoder', 'ConditionalDetrTransformerDecoder',
     'ConditionalDetrTransformerDecoderLayer', 'DinoTransformerDecoder',
     'CdnQueryGenerator', 'Mask2FormerTransformerEncoder',

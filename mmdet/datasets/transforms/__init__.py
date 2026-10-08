@@ -23,6 +23,21 @@ from .transforms import (Albu, CachedMixUp, CachedMosaic, CopyPaste, CutOut,
                          RandomFlip, RandomShift, Resize, ResizeShortestEdge,
                          SegRescale, YOLOXHSVRandomAug)
 from .wrappers import MultiBranch, ProposalBroadcaster, RandomOrder
+from .ocr_dino_transforms import (
+    LoadOCRAnnotations,
+    PackOCRDinoInputs,
+    TokenizeOCRText,
+)
+
+from .text_spotting_transforms import (
+    EncodeRecognitionText,
+    LoadTextSpottingAnnotations,
+    PackTextSpottingInputs,
+)
+
+from .text_spotting_layers import (
+    TaskAwareRecognitionQueryInitializer,
+)
 
 __all__ = [
     'PackDetInputs', 'ToTensor', 'ImageToTensor', 'Transpose',
@@ -33,12 +48,12 @@ __all__ = [
     'AutoAugment', 'CutOut', 'ShearX', 'ShearY', 'Rotate', 'Color', 'Equalize',
     'Brightness', 'Contrast', 'TranslateX', 'TranslateY', 'RandomShift',
     'Mosaic', 'MixUp', 'RandomAffine', 'YOLOXHSVRandomAug', 'CopyPaste',
-    'FilterAnnotations', 'Pad', 'GeomTransform', 'ColorTransform',
-    'RandAugment', 'Sharpness', 'Solarize', 'SolarizeAdd', 'Posterize',
-    'AutoContrast', 'Invert', 'MultiBranch', 'RandomErasing',
+    'FilterAnnotations', 'Pad', 'GeomTransform', 'ColorTransform','TaskAwareRecognitionQueryInitializer',
+    'RandAugment', 'Sharpness', 'Solarize', 'SolarizeAdd', 'Posterize','EncodeRecognitionText','LoadTextSpottingAnnotations',
+    'AutoContrast', 'Invert', 'MultiBranch', 'RandomErasing','PackTextSpottingInputs',
     'LoadEmptyAnnotations', 'RandomOrder', 'CachedMosaic', 'CachedMixUp',
-    'FixShapeResize', 'ProposalBroadcaster', 'InferencerLoader',
-    'LoadTrackAnnotations', 'BaseFrameSample', 'UniformRefFrameSample',
+    'FixShapeResize', 'ProposalBroadcaster', 'InferencerLoader','TokenizeOCRText',
+    'LoadTrackAnnotations', 'BaseFrameSample', 'UniformRefFrameSample','LoadOCRAnnotations','PackOCRDinoInputs',
     'PackTrackInputs', 'PackReIDInputs', 'FixScaleResize',
     'ResizeShortestEdge', 'GTBoxSubOne_GLIP', 'RandomFlip_GLIP',
     'RandomSamplingNegPos', 'LoadTextAnnotations'
